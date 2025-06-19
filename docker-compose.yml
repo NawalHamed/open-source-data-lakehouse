@@ -17,7 +17,7 @@ services:
       - minio_data:/data
     networks:
       - shared-network
-      restart: always
+    restart: always
 
   mc:
     image: minio/mc
@@ -34,7 +34,7 @@ services:
 
     networks:
       - shared-network
-      restart: always
+    restart: always
 
   nessie:
     image: projectnessie/nessie:latest
@@ -48,7 +48,7 @@ services:
       VIRTUAL_PORT: 19120
     networks:
       - shared-network
-      restart: always 
+    restart: always 
 
   spark:
     build: ./spark
@@ -74,7 +74,7 @@ services:
                jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''"
     networks:
       - shared-network
-      restart: always
+    restart: always
       
   postgres:
     image: postgres:13
@@ -90,7 +90,7 @@ services:
       
     networks:
       - shared-network
-      restart: always
+    restart: always
       
   airflow:
     build:
@@ -128,7 +128,7 @@ services:
 
     networks:
       - shared-network
-      restart: always
+    restart: always
 
 volumes:
   postgres_data:
