@@ -32,14 +32,6 @@ MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
 MINIO_BUCKET = 'structured'  # Note: Fixed typo from 'cities-countries'
 
-minio_client = Minio(
-    MINIO_ENDPOINT,
-    access_key=MINIO_ACCESS_KEY,
-    secret_key=MINIO_SECRET_KEY,
-    secure=False,
-    # Add this to force path-style URLs
-    region=None
-)
 
 def ensure_bucket():
     """Ensure the MinIO bucket exists."""
@@ -47,7 +39,9 @@ def ensure_bucket():
         MINIO_ENDPOINT,
         access_key=MINIO_ACCESS_KEY,
         secret_key=MINIO_SECRET_KEY,
-        secure=MINIO_SECURE
+        secure=MINIO_SECURE,
+         # Add this to force path-style URLs
+        region=None
     )
     if not minio_client.bucket_exists(MINIO_BUCKET):
         minio_client.make_bucket(MINIO_BUCKET)
