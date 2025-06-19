@@ -1,4 +1,5 @@
 
+
 services:
   minio:
     image: minio/minio
@@ -7,9 +8,6 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    # ports:
-    #   - "9000:9000"
-    #   - "9001:9001"
       VIRTUAL_HOST: minio.rihal.dev
       VIRTUAL_PORT: 9009
     volumes:
@@ -30,7 +28,6 @@ services:
         mc mb local/warehouse
         mc policy set public local/warehouse
         tail -f /dev/null
-
     networks:
       - shared-network
     restart: always
@@ -40,9 +37,6 @@ services:
     container_name: nessie
     environment:
       QUARKUS_HTTP_PORT: 19120
-    # ports:
-    #   - "19120:19120"
-
       VIRTUAL_HOST: nessie.rihal.dev
       VIRTUAL_PORT: 19120
     networks:
@@ -62,8 +56,6 @@ services:
       AWS_S3_ENDPOINT: http://minio_v:9009
       NESSIE_URI: http://nessie:19120/api/v2
       WAREHOUSE: /warehouse
-      # - VIRTUAL_HOST=spark.rihal.dev
-      # - VIRTUAL_PORT=8888
     volumes:
       - ./spark/conf:/home/spark/notebooks
       - ./spark/jobs:/opt/spark_jobs:rw
@@ -74,7 +66,7 @@ services:
     networks:
       - shared-network
     restart: always
-      
+
   postgres:
     image: postgres:13
     container_name: postgres_v
@@ -86,21 +78,19 @@ services:
       - "5490:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      
     networks:
       - shared-network
     restart: always
-      
+
   airflow:
     build:
       context: ./airflow
       dockerfile: Dockerfile
-    #image: apache/airflow:2.7.0
     container_name: airflow
     depends_on: [spark, minio, postgres]
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=  # Replace with your secure key
+      - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
@@ -110,21 +100,42 @@ services:
       - VIRTUAL_HOST=airflow.rihal.dev
       - VIRTUAL_PORT=8080
     volumes:
-      #- ./airflow:/opt/airflow
-      #- ./airflow/dags:/opt/airflow/dags
-      #- ./spark/jobs:/opt/spark_jobs
       - ./airflow/dags:/opt/airflow/dags
       - ./spark/jobs:/opt/spark_jobs
       - /var/run/docker.sock:/var/run/docker.sock
-    # ports:
-    #   - "8080:8080"
     command: >
       bash -c "
         airflow db init &&
         airflow db migrate &&
         airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
         airflow webserver & airflow scheduler"
+    networks:
+      - shared-network
+    restart: always
 
+  superset:
+    image: apache/superset:latest
+    container_name: superset
+    environment:
+      - SUPERSET_SECRET_KEY=your-secret-key-change-this
+      - SUPERSET_LOAD_EXAMPLES=no
+      - SUPERSET_DATABASE_HOST=postgres_v
+      - SUPERSET_DATABASE_USER=airflow
+      - SUPERSET_DATABASE_PASSWORD=airflow
+      - SUPERSET_DATABASE_DB=airflow
+      - VIRTUAL_HOST=superset.rihal.dev
+      - VIRTUAL_PORT=8088
+    depends_on:
+      - postgres
+      - minio
+    volumes:
+      - superset_data:/app/superset_home
+    command: >
+      bash -c "
+        superset db upgrade &&
+        superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+        superset init &&
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger"
     networks:
       - shared-network
     restart: always
@@ -132,6 +143,7 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  superset_data:
 
 networks:
   shared-network:
