@@ -20,13 +20,13 @@ default_args = {
 }
 
 # Configuration
-API_KEY = '52d1fcbcd4b0ca0f161b226257cb0a25'
+API_KEY = 'a16798cda2025004aa3e84a44b77bbe2'
 BASE_URL = 'http://api.aviationstack.com/v1'
 ENDPOINTS = ['cities', 'countries']
-MAX_LIMIT = 100
+MAX_LIMIT = 5
 
 # MinIO Configuration
-MINIO_ENDPOINT = 'minio:9000'
+MINIO_ENDPOINT = 'minio_v:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
