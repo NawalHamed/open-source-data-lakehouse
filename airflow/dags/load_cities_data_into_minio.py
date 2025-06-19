@@ -26,11 +26,20 @@ ENDPOINTS = ['cities', 'countries']
 MAX_LIMIT = 5
 
 # MinIO Configuration
-MINIO_ENDPOINT = 'minio:9000'
+MINIO_ENDPOINT = 'minio_v:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
 MINIO_BUCKET = 'structured'  # Note: Fixed typo from 'cities-countries'
+
+minio_client = Minio(
+    MINIO_ENDPOINT,
+    access_key=MINIO_ACCESS_KEY,
+    secret_key=MINIO_SECRET_KEY,
+    secure=False,
+    # Add this to force path-style URLs
+    region=None
+)
 
 def ensure_bucket():
     """Ensure the MinIO bucket exists."""
