@@ -30,7 +30,7 @@ MINIO_ENDPOINT = 'minio_v:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
-MINIO_BUCKET = 'countries'  # Note: Fixed typo from 'cities-countries'
+MINIO_BUCKET = 'structured'  # Note: Fixed typo from 'cities-countries'
 
 def ensure_bucket():
     """Ensure the MinIO bucket exists."""
