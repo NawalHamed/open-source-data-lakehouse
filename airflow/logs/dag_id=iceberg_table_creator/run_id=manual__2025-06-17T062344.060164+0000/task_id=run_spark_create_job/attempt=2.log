@@ -1,0 +1,23 @@
+[2025-06-17T06:29:12.281+0000] {taskinstance.py:1159} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: iceberg_table_creator.run_spark_create_job manual__2025-06-17T06:23:44.060164+00:00 [queued]>
+[2025-06-17T06:29:12.370+0000] {taskinstance.py:1159} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: iceberg_table_creator.run_spark_create_job manual__2025-06-17T06:23:44.060164+00:00 [queued]>
+[2025-06-17T06:29:12.371+0000] {taskinstance.py:1361} INFO - Starting attempt 2 of 2
+[2025-06-17T06:29:12.488+0000] {taskinstance.py:1382} INFO - Executing <Task(BashOperator): run_spark_create_job> on 2025-06-17 06:23:44.060164+00:00
+[2025-06-17T06:29:12.523+0000] {standard_task_runner.py:57} INFO - Started process 280 to run task
+[2025-06-17T06:29:12.562+0000] {standard_task_runner.py:84} INFO - Running: ['***', 'tasks', 'run', 'iceberg_table_creator', 'run_spark_create_job', 'manual__2025-06-17T06:23:44.060164+00:00', '--job-id', '4', '--raw', '--subdir', 'DAGS_FOLDER/iceberg_job_dag.py', '--cfg-path', '/tmp/tmpkybpnlp3']
+[2025-06-17T06:29:12.592+0000] {standard_task_runner.py:85} INFO - Job 4: Subtask run_spark_create_job
+[2025-06-17T06:29:13.419+0000] {task_command.py:415} INFO - Running <TaskInstance: iceberg_table_creator.run_spark_create_job manual__2025-06-17T06:23:44.060164+00:00 [running]> on host a1d34f623904
+[2025-06-17T06:29:14.193+0000] {taskinstance.py:1660} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='***' AIRFLOW_CTX_DAG_ID='iceberg_table_creator' AIRFLOW_CTX_TASK_ID='run_spark_create_job' AIRFLOW_CTX_EXECUTION_DATE='2025-06-17T06:23:44.060164+00:00' AIRFLOW_CTX_TRY_NUMBER='2' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-06-17T06:23:44.060164+00:00'
+[2025-06-17T06:29:14.202+0000] {subprocess.py:63} INFO - Tmp dir root location: /tmp
+[2025-06-17T06:29:14.212+0000] {subprocess.py:75} INFO - Running command: ['/bin/bash', '-c', 'spark-submit --master local /opt/spark_jobs/create_iceberg_table.py']
+[2025-06-17T06:29:14.350+0000] {subprocess.py:86} INFO - Output:
+[2025-06-17T06:29:14.357+0000] {subprocess.py:93} INFO - /bin/bash: line 1: spark-submit: command not found
+[2025-06-17T06:29:14.377+0000] {subprocess.py:97} INFO - Command exited with return code 127
+[2025-06-17T06:29:14.469+0000] {taskinstance.py:1943} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.8/site-packages/airflow/operators/bash.py", line 210, in execute
+    raise AirflowException(
+airflow.exceptions.AirflowException: Bash command failed. The command returned a non-zero exit code 127.
+[2025-06-17T06:29:14.523+0000] {taskinstance.py:1400} INFO - Marking task as FAILED. dag_id=iceberg_table_creator, task_id=run_spark_create_job, execution_date=20250617T062344, start_date=20250617T062912, end_date=20250617T062914
+[2025-06-17T06:29:14.603+0000] {standard_task_runner.py:104} ERROR - Failed to execute job 4 for task run_spark_create_job (Bash command failed. The command returned a non-zero exit code 127.; 280)
+[2025-06-17T06:29:14.638+0000] {local_task_job_runner.py:228} INFO - Task exited with return code 1
+[2025-06-17T06:29:14.732+0000] {taskinstance.py:2784} INFO - 0 downstream tasks scheduled from follow-on schedule check
