@@ -18,7 +18,7 @@ spark = SparkSession.builder \
 csv_df = spark.read \
     .option("header", True) \
     .option("inferSchema", True) \
-    .csv("s3a://cities-countries/countries/csv/*.csv")
+    .csv("s3a://structured/countries/csv/*.csv")
 
 # Optional: inspect schema
 csv_df.printSchema()
@@ -28,7 +28,7 @@ csv_df.show(5)
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # Step 4: Write to Iceberg table
-csv_df.writeTo("nessie.silver_layer.countries_table").createOrReplace()
+csv_df.writeTo("nessie.silver_layer.structured").createOrReplace()
 
 # Step 5: Verify
-spark.read.table("nessie.silver_layer.countries_table").show(5)
+spark.read.table("nessie.silver_layer.structured").show(5)
