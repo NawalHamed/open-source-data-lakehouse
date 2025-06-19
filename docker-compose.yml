@@ -78,7 +78,7 @@ services:
       
   postgres:
     image: postgres:13
-    container_name: postgres
+    container_name: postgres_v
     environment:
       POSTGRES_USER: airflow
       POSTGRES_PASSWORD: airflow
@@ -102,7 +102,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=  # Replace with your secure key
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
       - AWS_S3_ENDPOINT=http://minio_v:9000
