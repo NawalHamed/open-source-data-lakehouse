@@ -11,8 +11,8 @@ services:
     # ports:
     #   - "9000:9000"
     #   - "9001:9001"
-      - VIRTUAL_HOST=minio.rihal.dev
-      - VIRTUAL_PORT=9001
+      VIRTUAL_HOST: minio.rihal.dev
+      VIRTUAL_PORT: 9001
     volumes:
       - minio_data:/data
     networks:
@@ -44,8 +44,8 @@ services:
     # ports:
     #   - "19120:19120"
 
-      - VIRTUAL_HOST=nessie.rihal.dev
-      - VIRTUAL_PORT=19120
+      VIRTUAL_HOST: nessie.rihal.dev
+      VIRTUAL_PORT: 19120
     networks:
       - shared-network
       restart: always 
