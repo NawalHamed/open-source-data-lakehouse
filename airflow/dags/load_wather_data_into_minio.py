@@ -21,7 +21,7 @@ CONFIG = {
     'API_KEY': 'a16798cda2025004aa3e84a44b77bbe2',
     'BASE_URL': 'http://api.aviationstack.com/v1',
     'MAX_LIMIT': 5,
-    'MINIO_ENDPOINT': 'minio_v:9000',  # Use 'localhost:9000' if running outside Docker
+    'MINIO_ENDPOINT': 'minio:9000',  # Use 'localhost:9000' if running outside Docker
     'MINIO_ACCESS_KEY': 'minioadmin',
     'MINIO_SECRET_KEY': 'minioadmin',
     'MINIO_BUCKET': 'semi-structured',
