@@ -24,7 +24,7 @@ CONFIG = {
     'MINIO_ENDPOINT': 'minio_v:9009',  # Use 'localhost:9000' if running outside Docker
     'MINIO_ACCESS_KEY': 'minioadmin',
     'MINIO_SECRET_KEY': 'minioadmin',
-    'MINIO_BUCKET': 'airline-info',
+    'MINIO_BUCKET': 'semi-structured',
     'MINIO_SECURE': False
 }
 
