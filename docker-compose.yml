@@ -4,7 +4,7 @@ services:
   minio:
     image: minio/minio
     container_name: minio_v
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ":9009"
     ports:
        - "9009:9000"
        - "9101:9001" #9191:9001
