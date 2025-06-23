@@ -5,9 +5,9 @@ services:
     image: minio/minio
     container_name: minio_v
     command: server /data --console-address ":9001"
-    #ports:
-       #- "9009:9000"
-       #- "9101:9001" #9191:9001
+    ports:
+       - "9009:9000"
+       - "9101:9001" #9191:9001
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
