@@ -16,5 +16,5 @@ with DAG(
 
     run_spark_job = BashOperator(
         task_id="run_spark_job",
-        bash_command="docker exec spark spark-submit /opt/spark_jobs/create_iceberg_table.py",
+        bash_command="docker exec spark-master spark-submit /opt/spark_jobs/create_iceberg_table.py",
     )
