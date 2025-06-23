@@ -27,7 +27,7 @@ services:
       - /bin/sh
       - "-c"
       - |
-        until mc config host add local http://minio_v:9009 minioadmin minioadmin; do sleep 1; done
+        until mc config host add local http://minio_v:9001 minioadmin minioadmin; do sleep 1; done
         mc mb local/warehouse
         mc policy set public local/warehouse
         tail -f /dev/null
