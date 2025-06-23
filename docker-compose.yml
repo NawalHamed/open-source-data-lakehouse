@@ -70,7 +70,7 @@ services:
       - "8888:8888"    # Jupyter Notebook
       - "4040:4040"    # Spark Job UI
       - "7077:7077"    # Spark Master internal port
-      - "8081:8080"    # Spark Master Web UI on host port 8081
+      - "8082:8080"    # Spark Master Web UI on host port 8082
     environment:
       SPARK_MODE: master
       SPARK_MASTER_PORT: 7077
