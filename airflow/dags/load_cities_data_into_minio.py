@@ -26,7 +26,7 @@ ENDPOINTS = ['cities', 'countries']
 MAX_LIMIT = 5
 
 # MinIO Configuration
-MINIO_ENDPOINT = 'minio_v:9000'
+MINIO_ENDPOINT = 'minio_v:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
