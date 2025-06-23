@@ -4,10 +4,10 @@ services:
   minio:
     image: minio/minio
     container_name: minio_v
-    command: server /data --console-address ":9009"
+    command: server /data --console-address ":9001"
     #ports:
       # - "9009:9000"
-      # - "9101:9001"
+      # - "9101:9001" #9191:9001
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -35,6 +35,7 @@ services:
       - shared-network
     restart: always
 
+
   nessie:
     image: projectnessie/nessie:latest
     container_name: nessie
@@ -45,30 +46,6 @@ services:
     networks:
       - shared-network
     restart: always 
-
-  spark:
-    build: ./spark
-    container_name: spark
-    depends_on: [minio, nessie]
-    ports:
-      - "8888:8888"
-      - "4040:4040"
-    environment:
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
-      AWS_S3_ENDPOINT: http://minio_v:9009
-      NESSIE_URI: http://nessie:19120/api/v2
-      WAREHOUSE: /warehouse
-    volumes:
-      - ./spark/conf:/home/spark/notebooks
-      - ./spark/jobs:/opt/spark_jobs:rw
-    working_dir: /home/spark/notebooks
-    command: >
-      bash -c "pip install notebook &&
-               jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''"
-    networks:
-      - shared-network
-    restart: always
 
   postgres:
     image: postgres:13
@@ -85,12 +62,70 @@ services:
       - shared-network
     restart: always
 
+  spark-master:
+    build: ./spark
+    container_name: spark-master
+    depends_on: [minio, nessie]
+    ports:
+      - "8888:8888"    # Jupyter Notebook
+      - "4040:4040"    # Spark Job UI
+      - "7077:7077"    # Spark Master internal port
+      - "8081:8080"    # Spark Master Web UI on host port 8081
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_PORT: 7077
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_S3_ENDPOINT: http://minio_v:9009
+      NESSIE_URI: http://nessie:19120/api/v2
+      WAREHOUSE: /warehouse
+    volumes:
+      - ./spark/conf:/home/spark/notebooks
+      - ./spark/jobs:/opt/spark_jobs:rw
+    working_dir: /home/spark/notebooks
+    command: >
+      bash -c "
+        /opt/bitnami/spark/sbin/start-master.sh &
+        jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''
+      "
+    networks:
+      - shared-network
+    restart: always
+
+  spark-worker-1:
+    build: ./spark
+    container_name: spark-worker-1
+    depends_on: [spark-master]
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    volumes:
+      - ./spark/jobs:/opt/spark_jobs:rw
+
+  spark-worker-2:
+    build: ./spark
+    container_name: spark-worker-2
+    depends_on: [spark-master]
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2g
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    volumes:
+      - ./spark/jobs:/opt/spark_jobs:rw
+
   airflow:
     build:
       context: ./airflow
       dockerfile: Dockerfile
     container_name: airflow
-    depends_on: [spark, minio, postgres]
+    depends_on: [spark-master, minio, postgres]
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=
