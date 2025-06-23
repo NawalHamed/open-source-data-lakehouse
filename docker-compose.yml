@@ -105,6 +105,9 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
     volumes:
       - ./spark/jobs:/opt/spark_jobs:rw
+    networks:
+      - shared-network
+    restart: always
 
   spark-worker-2:
     build: ./spark
@@ -119,6 +122,9 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
     volumes:
       - ./spark/jobs:/opt/spark_jobs:rw
+    networks:
+      - shared-network
+    restart: always
 
   airflow:
     build:
