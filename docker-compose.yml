@@ -4,7 +4,7 @@ services:
   minio:
     image: minio/minio
     container_name: minio_v
-    command: server /data --address ":9001" --console-address ":9009"
+    command: server /data --console-address ":9001"
     # ports:
     #    - "9009:9000"
     #    - "9101:9001" #9191:9001
@@ -27,7 +27,7 @@ services:
       - /bin/sh
       - "-c"
       - |
-        until mc config host add local http://minio_v:9001 minioadmin minioadmin; do sleep 1; done
+        until mc config host add local http://minio_v:9000 minioadmin minioadmin; do sleep 1; done
         mc mb local/warehouse
         mc policy set public local/warehouse
         tail -f /dev/null
@@ -76,7 +76,7 @@ services:
       SPARK_MASTER_PORT: 7077
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
-      AWS_S3_ENDPOINT: http://minio_v:9001
+      AWS_S3_ENDPOINT: http://minio_v:9000
       NESSIE_URI: http://nessie:19120/api/v2
       WAREHOUSE: /warehouse
     volumes:
@@ -138,7 +138,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_S3_ENDPOINT=http://minio_v:9001
+      - AWS_S3_ENDPOINT=http://minio_v:9000
       - NESSIE_URI=http://nessie:19120/api/v2
       - WAREHOUSE=warehouse
       - VIRTUAL_HOST=airflow.rihal.dev
