@@ -4,15 +4,15 @@ services:
   minio:
     image: minio/minio
     container_name: minio_v
-    command: server /data --console-address ":9001"
+    command: server /data --address ":9000" --console-address ":9001"
     ports:
-       - "9009:9000"
-       - "9101:9001" #9191:9001
+       - "9009:9000" # Host 9009 -> Internal 9000 (S3 API)
+       - "9101:9001"  # Host 9101 -> Internal 9001 (Console)
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-      VIRTUAL_HOST: minio.rihal.dev
-      VIRTUAL_PORT: 9009
+      VIRTUAL_HOST: console.minio.rihal.dev
+      VIRTUAL_PORT: 9101
     volumes:
       - minio_data:/data
     networks:
