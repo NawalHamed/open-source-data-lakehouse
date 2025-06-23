@@ -12,7 +12,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
       VIRTUAL_HOST: minio.rihal.dev
-      VIRTUAL_PORT: 9009
+      VIRTUAL_PORT: 9101
     volumes:
       - minio_data:/data
     networks:
