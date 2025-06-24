@@ -199,7 +199,7 @@ services:
       - minio
       - nessie
     ports:
-      - "8084:8080"
+      - "8084:8090"
     volumes:
       - ./trino/catalog:/etc/trino/catalog
       - ./trino/config.properties:/etc/trino/config.properties
@@ -209,7 +209,7 @@ services:
       - S3_ENDPOINT=http://minio_v:9009
       - S3_PATH_STYLE=true
       - VIRTUAL_HOST=trino.rihal.dev
-      - VIRTUAL_PORT=8080
+      - VIRTUAL_PORT=8090
     networks:
       - shared-network
     restart: always
