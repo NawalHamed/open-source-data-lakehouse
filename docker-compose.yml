@@ -220,7 +220,7 @@ services:
     restart: always
     environment:
       VIRTUAL_HOST: cdlakehouse.rihal.dev
-      VIRTUAL_PORT: 8981
+      VIRTUAL_PORT: 8978
     volumes: 
       - cloudbeaver-config:/opt/cloudbeaver/workspace
     networks:
