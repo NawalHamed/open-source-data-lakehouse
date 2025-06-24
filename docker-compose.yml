@@ -138,7 +138,7 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_S3_ENDPOINT=http://minio_v:9000
+      - AWS_S3_ENDPOINT=http://minio_v:9009
       - NESSIE_URI=http://nessie:19120/api/v2
       - WAREHOUSE=warehouse
       - VIRTUAL_HOST=airflow.rihal.dev
