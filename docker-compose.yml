@@ -184,7 +184,30 @@ services:
     networks:
       - shared-network
     restart: always
-
+ 
+  trino:
+    image: trinodb/trino:latest
+    container_name: trino
+    depends_on:
+      - minio
+      - nessie
+    ports:
+      - "8083:8080"  # Trino Web UI accessible on this port
+    volumes:
+      - ./trino/catalog:/etc/trino/catalog
+      - ./trino/config.properties:/etc/trino/config.properties
+    environment:
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - S3_ENDPOINT=http://minio_v:9009
+      - S3_PATH_STYLE=true
+      - VIRTUAL_HOST=trino.rihal.dev
+      - VIRTUAL_PORT=8080
+    networks:
+      - shared-network
+    restart: always
+	
+	
 volumes:
   postgres_data:
   minio_data:
