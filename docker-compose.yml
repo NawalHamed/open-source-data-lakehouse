@@ -6,7 +6,7 @@ services:
     container_name: minio_v
     command: server --address ":9009" /data --console-address ":9001"
     ports:
-      - "9009:9000" # Host 9009 -> Internal 9000 (S3 API)
+      - "9009:9009" # Host 9009 -> Internal 9000 (S3 API)
       - "9101:9001"  # Host 9101 -> Internal 9001 (Console)
     environment:
       MINIO_ROOT_USER: minioadmin
