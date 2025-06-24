@@ -1,13 +1,11 @@
-
-
 services:
   minio:
     image: minio/minio
     container_name: minio_v
     command: server --address ":9009" /data --console-address ":9001"
     ports:
-      - "9009:9009" # Host 9009 -> Internal 9000 (S3 API)
-      - "9102:9001"  # Host 9101 -> Internal 9001 (Console)
+      - "9009:9009"
+      - "9102:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -22,7 +20,8 @@ services:
   mc:
     image: minio/mc
     container_name: mc
-    depends_on: [minio]
+    depends_on:
+      - minio
     entrypoint:
       - /bin/sh
       - "-c"
@@ -35,7 +34,6 @@ services:
       - shared-network
     restart: always
 
-
   nessie:
     image: projectnessie/nessie:latest
     container_name: nessie
@@ -45,7 +43,7 @@ services:
       VIRTUAL_PORT: 19120
     networks:
       - shared-network
-    restart: always 
+    restart: always
 
   postgres:
     image: postgres:13
@@ -65,12 +63,14 @@ services:
   spark-master:
     build: ./spark
     container_name: spark-master
-    depends_on: [minio, nessie]
+    depends_on:
+      - minio
+      - nessie
     ports:
-      - "8888:8888"    # Jupyter Notebook
-      - "4040:4040"    # Spark Job UI
-      - "7077:7077"    # Spark Master internal port
-      - "8082:8080"    # Spark Master Web UI on host port 8082
+      - "8888:8888"
+      - "4040:4040"
+      - "7077:7077"
+      - "8082:8080"
     environment:
       SPARK_MODE: master
       SPARK_MASTER_PORT: 7077
@@ -95,7 +95,8 @@ services:
   spark-worker-1:
     build: ./spark
     container_name: spark-worker-1
-    depends_on: [spark-master]
+    depends_on:
+      - spark-master
     environment:
       SPARK_MODE: worker
       SPARK_MASTER_URL: spark://spark-master:7077
@@ -112,7 +113,8 @@ services:
   spark-worker-2:
     build: ./spark
     container_name: spark-worker-2
-    depends_on: [spark-master]
+    depends_on:
+      - spark-master
     environment:
       SPARK_MODE: worker
       SPARK_MASTER_URL: spark://spark-master:7077
@@ -131,7 +133,10 @@ services:
       context: ./airflow
       dockerfile: Dockerfile
     container_name: airflow
-    depends_on: [spark-master, minio, postgres]
+    depends_on:
+      - spark-master
+      - minio
+      - postgres
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=
@@ -153,7 +158,8 @@ services:
         airflow db init &&
         airflow db migrate &&
         airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
-        airflow webserver & airflow scheduler"
+        airflow webserver & airflow scheduler
+      "
     networks:
       - shared-network
     restart: always
@@ -180,11 +186,11 @@ services:
         superset db upgrade &&
         superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
         superset init &&
-        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger"
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+      "
     networks:
       - shared-network
     restart: always
-
 
   trino:
     image: trinodb/trino:latest
@@ -207,7 +213,7 @@ services:
     networks:
       - shared-network
     restart: always
-	
+
 volumes:
   postgres_data:
   minio_data:
