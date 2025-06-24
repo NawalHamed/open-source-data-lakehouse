@@ -9,7 +9,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
     .config("spark.sql.catalog.nessie.ref", "main") \
     .config("spark.sql.catalog.nessie.warehouse", "s3a://warehouse/") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
+    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
     .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
