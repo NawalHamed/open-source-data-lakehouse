@@ -213,8 +213,7 @@ services:
     networks:
       - shared-network
     restart: always
-	
-
+    
   cloudbeaver:
     container_name: cdlakehouse
     image: dbeaver/cloudbeaver:latest
