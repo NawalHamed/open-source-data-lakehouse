@@ -198,8 +198,8 @@ services:
     depends_on:
       - minio
       - nessie
-    ports:
-      - "8084:8091"
+    #ports:
+    #  - "8084:8090"
     volumes:
       - ./trino/catalog:/etc/trino/catalog
       - ./trino/config.properties:/etc/trino/config.properties
@@ -209,15 +209,31 @@ services:
       - S3_ENDPOINT=http://minio_v:9009
       - S3_PATH_STYLE=true
       - VIRTUAL_HOST=trino.rihal.dev
-      - VIRTUAL_PORT=8091
+      - VIRTUAL_PORT=8090
     networks:
       - shared-network
     restart: always
+	
+
+  cloudbeaver:
+    container_name: cdlakehouse
+    image: dbeaver/cloudbeaver:latest
+    restart: always
+    environment:
+      VIRTUAL_HOST: cdlakehouse.rihal.dev
+      VIRTUAL_PORT: 8981
+    volumes: 
+      - cloudbeaver-config:/opt/cloudbeaver/workspace
+    networks:
+      - shared-network
+    depends_on:
+      - trino:
 
 volumes:
   postgres_data:
   minio_data:
   superset_data:
+  cloudbeaver-config:
 
 networks:
   shared-network:
