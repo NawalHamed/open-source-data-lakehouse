@@ -16,7 +16,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Step 2: Read image metadata from MinIO bucket
-image_df = spark.read.format("image").load("s3a://unstructured/airport_table_view_first5cols.png")
+image_df = spark.read.format("image").load("s3a://unstructured-data/airport_table_view_first5cols.png")
 
 # Optional: Show schema and metadata
 image_df.printSchema()
