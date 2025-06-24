@@ -226,7 +226,7 @@ services:
     networks:
       - shared-network
     depends_on:
-      - trino:
+      - trino
 
 volumes:
   postgres_data:
