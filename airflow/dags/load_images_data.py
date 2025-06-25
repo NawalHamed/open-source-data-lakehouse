@@ -282,7 +282,7 @@ start_task = DummyOperator(
 )
 
 process_task = PythonOperator(
-    task_id='continuous_image_processing',
+    task_id='ingest_raw_image_data_into_minio',
     python_callable=continuous_processing,
     dag=dag,
 )
