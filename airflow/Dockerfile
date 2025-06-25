@@ -10,4 +10,5 @@ RUN pip install --no-cache-dir \
     requests \
     minio \
     python-dotenv \
-	pyarrow
+    pyarrow \
+    Pillow
