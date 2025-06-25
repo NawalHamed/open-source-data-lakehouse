@@ -153,10 +153,10 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./spark/jobs:/opt/spark_jobs
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./airflow/requirements.txt:/requirements.txt
+      - ./airflow/requirement.txt:/requirement.txt
     command: >
       bash -c "
-        pip install -r /requirements.txt &&
+        pip install -r /requirement.txt &&
         airflow db init &&
         airflow db migrate &&
         airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin &&
