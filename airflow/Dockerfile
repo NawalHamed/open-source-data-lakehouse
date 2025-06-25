@@ -1,14 +1,18 @@
+# Use official Airflow base image
 FROM apache/airflow:2.7.0
 
-USER airflow
+# Switch to root for system-level package installations
+USER root
 
-# Install additional Python packages as the airflow user
-# Pin the docker provider version for known compatibility with Airflow 2.7.0
+# Install required Python libraries, including Pillow (PIL)
 RUN pip install --no-cache-dir \
+    Pillow \
     apache-airflow-providers-docker==3.8.0 \
     pandas \
     requests \
     minio \
     python-dotenv \
-    pyarrow \
-    Pillow
+    pyarrow
+
+# Return to airflow user for security best practices
+USER airflow
