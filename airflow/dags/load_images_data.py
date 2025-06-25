@@ -25,7 +25,7 @@ DEFAULT_ARGS = {
 }
 
 # MinIO config
-MINIO_CLIENT = Minio("minio:9000",
+MINIO_CLIENT = Minio("minio:9009",
                     access_key="minioadmin",
                     secret_key="minioadmin",
                     secure=False)
