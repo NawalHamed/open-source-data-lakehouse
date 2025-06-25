@@ -1,0 +1,7 @@
+Pillow
+pandas
+requests
+minio
+python-dotenv
+pyarrow
+apache-airflow-providers-docker==3.8.0
