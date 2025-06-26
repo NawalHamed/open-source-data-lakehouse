@@ -14,7 +14,7 @@ DEFAULT_ARGS = {
 }
 
 MINIO_CLIENT = Minio(
-    "minio:9000",    # Use container name for Docker networks
+    "minio:9009",    # Use container name for Docker networks
     access_key="minioadmin",
     secret_key="minioadmin",
     secure=False
