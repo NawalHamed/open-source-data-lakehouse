@@ -14,7 +14,7 @@ MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'warehouse'
 FILE_FORMAT = 'csv'  # Options: 'json' or 'csv'
-OBJECT_NAME = f"bronze_layer/structured_raw_data/weather-data/weather_data.{FILE_FORMAT}"
+OBJECT_NAME = f"bronze_layer/structured_raw_data/weather_data/weather_data.{FILE_FORMAT}"
 # =======================================
 
 WEATHER_CONDITIONS = [
