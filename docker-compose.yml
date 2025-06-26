@@ -260,7 +260,7 @@ services:
     networks:
        - shared-network
     depends_on:
-      db-app:
+      postgres:
         condition: service_healthy
     deploy:
       resources:
