@@ -16,7 +16,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Step 2: Read image metadata from MinIO bucket
-image_df = spark.read.format("image").load("s3a://unstructured-data/airport_table_view_first5cols.png")
+image_df = spark.read.format("image").load("s3a://warehouse/bronze_layer/unstructured_images_raw_data/")
 
 # Optional: Show schema and metadata
 image_df.printSchema()
@@ -29,10 +29,10 @@ image_df.select(
 ).show(truncate=False)
 
 # Step 3: Create namespace/schema in Iceberg via Nessie if it doesn't exist
-spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.bronze_layer")
+spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # Step 4: Write image metadata as an Iceberg table using Nessie catalog
-image_df.writeTo("nessie.bronze_layer.unstructured").createOrReplace()
+image_df.writeTo("nessie.silver_layer.image_metadata").createOrReplace()
 
 # Step 5: Read back from the Iceberg table to verify
-spark.read.table("nessie.bronze_layer.unstructured").limit(50).toPandas()
+spark.read.table("nessie.bronze_layer.image_metadata").limit(50).toPandas()
