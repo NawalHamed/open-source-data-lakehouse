@@ -10,7 +10,7 @@ from io import BytesIO, StringIO
 
 # ============ CONFIGURATION ============
 NUM_RECORDS = 600
-MINIO_ENDPOINT = 'minio:9000'  # Use container name for Docker networks
+MINIO_ENDPOINT = 'minio:9009'  # Use container name for Docker networks
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'warehouse'
