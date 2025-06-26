@@ -227,8 +227,6 @@ services:
       - cloudbeaver-config:/opt/cloudbeaver/workspace
     networks:
       - shared-network
-    depends_on:
-      - trino
 
 volumes:
   postgres_data:
