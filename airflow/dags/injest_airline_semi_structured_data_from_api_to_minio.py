@@ -13,12 +13,12 @@ from minio import Minio
 NUM_RECORDS = 500
 MAX_RECORDS = 500000
 FILE_FORMAT = 'json'  # Options: 'json' or 'csv'
-MINIO_ENDPOINT = 'minio:9000'  # Update based on Airflow-MinIO network
+MINIO_ENDPOINT = 'minio:9009'  # Update based on Airflow-MinIO network
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
-MINIO_BUCKET = 'bronze-layer'
-OBJECT_NAME = f"semi-structured-raw-data/airline-data/airlines_data.{FILE_FORMAT}"
+MINIO_BUCKET = 'warehouse'
+OBJECT_NAME = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data.{FILE_FORMAT}"
 # ====================================================
 
 PREDEFINED_AIRLINES = [
