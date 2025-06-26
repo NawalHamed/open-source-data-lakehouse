@@ -17,7 +17,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Step 2: Read JSON data from MinIO (semi-structured)
-df = spark.read.option("multiline", "true").json("s3a://warehouse/bronze-layer/semi-structured-raw-data/airline-data/*.json")
+df = spark.read.option("multiline", "true").json("s3a://warehouse/bronze_layer/semi_structured_raw_data/airline_data/*.json")
 
 # Step 3: Print schema and sample
 df.printSchema()
