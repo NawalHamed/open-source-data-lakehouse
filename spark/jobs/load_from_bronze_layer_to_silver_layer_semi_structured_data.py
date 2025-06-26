@@ -17,7 +17,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Step 2: Read JSON data from MinIO (semi-structured)
-df = spark.read.option("multiline", "true").json("s3a://semi-structured/batch/*.json")
+df = spark.read.option("multiline", "true").json("s3a://warehouse/bronze-layer/semi-structured-raw-data/airline-data/*.json")
 
 # Step 3: Print schema and sample
 df.printSchema()
@@ -30,7 +30,7 @@ df.show(5, truncate=False)
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # Step 5: Write to Iceberg Silver layer table
-df.writeTo("nessie.silver_layer.semi-structured").createOrReplace()
+df.writeTo("nessie.silver_layer.airline_data").createOrReplace()
 
 # Step 6: Verify
-spark.read.table("nessie.silver_layer.semi-structured").show(5)
+spark.read.table("nessie.silver_layer.airline_data").show(5)
