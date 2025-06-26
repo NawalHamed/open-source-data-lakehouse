@@ -6,13 +6,14 @@ USER root
 
 # Install required Python libraries, including Pillow (PIL)
 RUN pip install --no-cache-dir \
-    Pillow \
     apache-airflow-providers-docker==3.8.0 \
     pandas \
     requests \
     minio \
     python-dotenv \
-    pyarrow
+    pyarrow \
+    Pillow \
+    faker
 
 # Return to airflow user for security best practices
 USER airflow
