@@ -4,21 +4,18 @@ from datetime import datetime, timedelta
 import random
 import json
 import csv
-from faker import Faker
 from minio import Minio
 from io import BytesIO, StringIO
 
 # ============ CONFIGURATION ============
-NUM_RECORDS = 600
-MINIO_ENDPOINT = 'minio:9009'  # Use container name for Docker networks
+NUM_RECORDS = 500
+MINIO_ENDPOINT = 'minio:9009'  # Use container name in Docker
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'warehouse'
 FILE_FORMAT = 'csv'  # Options: 'json' or 'csv'
-OBJECT_NAME = f"bronze_layer/structured_raw_data/weather_data/weather_data.{FILE_FORMAT}"
+OBJECT_NAME = f"bronze_layer/structured_raw_data/weather-data/weather_data.{FILE_FORMAT}"
 # =======================================
-
-fake = Faker()
 
 WEATHER_CONDITIONS = [
     {"code": 296, "desc": "Light Rain", "icon": "wsymbol_0017_cloudy_with_light_rain.png"},
@@ -41,14 +38,18 @@ WIND_DIRECTIONS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
 AIRPORT_CODES_FOR_WEATHER = ["JFK", "LAX", "ATL", "ORD", "DFW", "DEN", "SFO", "CLT", "LAS", "PHX",
                              "IAH", "MIA", "SEA", "EWR", "MSP", "BOS", "DTW", "PHL", "FLL", "LGA"]
 
+CITIES = ["New York", "London", "Berlin", "Tokyo", "Muscat", "Paris", "Toronto", "Dubai"]
+COUNTRIES = ["USA", "UK", "Germany", "Japan", "Oman", "France", "Canada", "UAE"]
+REGIONS = ["East", "West", "North", "South", None]
+
 class WeatherDataGenerator:
     def __init__(self):
-        self.faker = Faker()
+        pass
 
     def _generate_location(self):
-        city = self.faker.city()
-        country = self.faker.country()
-        region = self.faker.state() if random.random() > 0.3 else None
+        city = random.choice(CITIES)
+        country = random.choice(COUNTRIES)
+        region = random.choice(REGIONS)
         lat = round(random.uniform(-90, 90), 3)
         lon = round(random.uniform(-180, 180), 3)
         query_lat = round(lat + random.uniform(-0.1, 0.1), 6)
@@ -152,6 +153,7 @@ def generate_and_upload_weather_data():
         client.make_bucket(MINIO_BUCKET)
 
     data = [generator.generate_weather_data() for _ in range(NUM_RECORDS)]
+
     if FILE_FORMAT == 'json':
         byte_data = json.dumps(data, indent=2).encode('utf-8')
         content_type = 'application/json'
@@ -165,9 +167,7 @@ def generate_and_upload_weather_data():
         byte_data = buffer.getvalue().encode('utf-8')
         content_type = 'text/csv'
 
-    client.put_object(
-        MINIO_BUCKET, OBJECT_NAME, data=BytesIO(byte_data), length=len(byte_data), content_type=content_type
-    )
+    client.put_object(MINIO_BUCKET, OBJECT_NAME, data=BytesIO(byte_data), length=len(byte_data), content_type=content_type)
     print(f"✅ {NUM_RECORDS} weather records uploaded to MinIO as {OBJECT_NAME}")
 
 # ============ Airflow DAG Setup ============
@@ -180,7 +180,7 @@ default_args = {
 with DAG(
     dag_id='injest_weather_structured_data_from_api_to_minio',
     default_args=default_args,
-    description='Generate mock weather data and save to MinIO',
+    description='Generate mock weather data and upload to MinIO',
     start_date=datetime(2024, 1, 1),
     schedule_interval='@daily',
     catchup=False,
@@ -191,4 +191,3 @@ with DAG(
         task_id='generate_and_upload_weather_data',
         python_callable=generate_and_upload_weather_data
     )
-
