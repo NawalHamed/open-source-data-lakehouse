@@ -216,17 +216,34 @@ services:
       - shared-network
     restart: always
     
+  # cloudbeaver:
+  #   container_name: cdlakehouse
+  #   image: dbeaver/cloudbeaver:latest
+  #   restart: always
+  #   environment:
+  #     VIRTUAL_HOST: cdlakehouse.rihal.dev
+  #     VIRTUAL_PORT: 8978
+  #   volumes: 
+  #     - cloudbeaver-config:/opt/cloudbeaver/workspace
+  #   networks:
+  #     - shared-network
+
+
   cloudbeaver:
-    container_name: cdlakehouse
     image: dbeaver/cloudbeaver:latest
-    restart: always
+    container_name: cdlakehouse
+    # ports:
+    #   - '9090:9090'
     environment:
       VIRTUAL_HOST: cdlakehouse.rihal.dev
-      VIRTUAL_PORT: 8978
+      VIRTUAL_PORT: 9090
+      CB_ADMIN_NAME: admin       # Set your desired admin username
+      CB_ADMIN_PASSWORD: mypass   # Set your desired admin password
     volumes: 
       - cloudbeaver-config:/opt/cloudbeaver/workspace
     networks:
-      - shared-network
+       - shared-network
+    restart: always
 
 volumes:
   postgres_data:
