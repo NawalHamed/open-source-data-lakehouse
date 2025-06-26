@@ -30,7 +30,7 @@ df.show(5, truncate=False)
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # Step 5: Write to Iceberg Silver layer table
-df.writeTo("nessie.silver_layer.airline_data").createOrReplace()
+df.writeTo("nessie.silver_layer.airline_data").append()
 
 # Step 6: Verify
 spark.read.table("nessie.silver_layer.airline_data").show(5)
