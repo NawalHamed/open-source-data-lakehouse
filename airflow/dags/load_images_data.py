@@ -76,7 +76,7 @@ def generate_and_upload_images():
 
 # ============ Airflow DAG ============
 with DAG(
-    dag_id="generate_multiple_satellite_images_to_minio",
+    dag_id="injest_images_unstructured_data_from_api_to_minio",
     default_args=DEFAULT_ARGS,
     description="Generate multiple satellite images and upload to MinIO without PIL",
     schedule_interval="@daily",
