@@ -216,17 +216,17 @@ services:
       - shared-network
     restart: always
     
-  # cloudbeaver:
-  #   container_name: cdlakehouse
-  #   image: dbeaver/cloudbeaver:latest
-  #   restart: always
-  #   environment:
-  #     VIRTUAL_HOST: cdlakehouse.rihal.dev
-  #     VIRTUAL_PORT: 8978
-  #   volumes: 
-  #     - cloudbeaver-config:/opt/cloudbeaver/workspace
-  #   networks:
-  #     - shared-network
+  cloudbeaver:
+    container_name: cdlakehouse
+    image: dbeaver/cloudbeaver:latest
+    restart: always
+    environment:
+      VIRTUAL_HOST: cdlakehouse.rihal.dev
+      VIRTUAL_PORT: 8978
+    volumes: 
+      - cloudbeaver-config:/opt/cloudbeaver/workspace
+    networks:
+      - shared-network
 
 
   # cloudbeaver:
@@ -248,25 +248,25 @@ services:
   #   restart: always
 
 
-  cloudbeaver:
-    container_name: cdlakehouse
-    image: dbeaver/cloudbeaver:latest
-    restart: always
-    environment:
-      VIRTUAL_HOST: cdlakehouse.rihal.dev
-      VIRTUAL_PORT: 8978
-    volumes: 
-      - cloudbeaver-config:/opt/cloudbeaver/workspace
-    networks:
-       - shared-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 4G
+  # cloudbeaver:
+  #   container_name: cdlakehouse
+  #   image: dbeaver/cloudbeaver:latest
+  #   restart: always
+  #   environment:
+  #     VIRTUAL_HOST: cdlakehouse.rihal.dev
+  #     VIRTUAL_PORT: 8978
+  #   volumes: 
+  #     - cloudbeaver-config:/opt/cloudbeaver/workspace
+  #   networks:
+  #      - shared-network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '4'
+  #         memory: 4G
 
 volumes:
   postgres_data:
