@@ -233,12 +233,12 @@ services:
     image: dbeaver/cloudbeaver:latest
     container_name: cdlakehouse
     ports:
-      - '9092:9092'
+      - '9098:9098'
     # ports:
     #   - '9090:9090'
     environment:
       VIRTUAL_HOST: cdlakehouse.rihal.dev
-      VIRTUAL_PORT: 9092
+      VIRTUAL_PORT: 9098
       CB_ADMIN_NAME: admin       # Set your desired admin username
       CB_ADMIN_PASSWORD: mypass   # Set your desired admin password
     volumes: 
