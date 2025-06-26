@@ -35,4 +35,4 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 image_df.writeTo("nessie.silver_layer.image_metadata").createOrReplace()
 
 # Step 5: Read back from the Iceberg table to verify
-spark.read.table("nessie.bronze_layer.image_metadata").limit(50).toPandas()
+spark.read.table("nessie.silver_layer.image_metadata").limit(50).toPandas()
