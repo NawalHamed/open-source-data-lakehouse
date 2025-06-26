@@ -233,7 +233,7 @@ services:
     image: dbeaver/cloudbeaver:latest
     container_name: cdlakehouse
     ports:
-    - '9090:9090'
+      - '9090:9090'
     # ports:
     #   - '9090:9090'
     environment:
