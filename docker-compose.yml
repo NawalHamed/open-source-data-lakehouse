@@ -228,7 +228,9 @@ services:
   #  networks:
   #    - shared-network
 	  
-	  
+  
+
+  
   cloudbeaver:
     container_name: cd
     image: dbeaver/cloudbeaver:latest
@@ -240,13 +242,9 @@ services:
     environment:
       CLOUDBEAVER_RESOURCE_QUOTA_DATA_EXPORT_FILE_SIZE_LIMIT: 1000000000
       VIRTUAL_HOST: cd.rihal.dev
-#      LETSENCRYPT_HOST: cloudbeaver.mem.gov.om
       VIRTUAL_PORT: 8978
-    deploy:
-      resources:
-        limits:
-          cpus: '3.00'
-          memory: 8G
+    networks:
+      - shared-network
 
 
   # cloudbeaver:
