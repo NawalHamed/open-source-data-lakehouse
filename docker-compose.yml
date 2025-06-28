@@ -229,14 +229,10 @@ services:
   #    - shared-network
 	  
   
-
-  
   cloudbeaver:
     container_name: cd
     image: dbeaver/cloudbeaver:latest
     restart: always
-    #ports:
-    #  - 8978:8978
     volumes:
       - cloudbeaver-config:/opt/cloudbeaver/workspace
     environment:
@@ -245,7 +241,6 @@ services:
       VIRTUAL_PORT: 8978
     networks:
       - shared-network
-
 
   # cloudbeaver:
   #   image: dbeaver/cloudbeaver:latest
