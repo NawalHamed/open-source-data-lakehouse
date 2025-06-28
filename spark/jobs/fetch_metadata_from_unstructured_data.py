@@ -32,7 +32,7 @@ image_df.select(
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # Step 4: Write image metadata as an Iceberg table using Nessie catalog
-image_df.writeTo("nessie.silver_layer.image_metadata").append()
+image_df.writeTo("nessie.silver_layer.image_metadata").createOrReplace()
 
 # Step 5: Read back from the Iceberg table to verify
 spark.read.table("nessie.silver_layer.image_metadata").limit(50).toPandas()
