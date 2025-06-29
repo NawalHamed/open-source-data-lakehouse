@@ -197,7 +197,8 @@ services:
     restart: always
 
   trino:
-    image: trinodb/trino:latest
+    #image: trinodb/trino:latest
+    image: projectnessie/trino:latest
     container_name: trino
     depends_on:
       - minio
