@@ -11,26 +11,21 @@ from minio import Minio
 
 # =================== CONFIGURATION ===================
 NUM_AIRLINE_RECORDS = 500
-MAX_AIRLINE_RECORDS = 500000
 NUM_AIRPORT_RECORDS = 50
-MAX_AIRPORT_RECORDS = 500
-FILE_FORMAT = 'json'  # Options: 'json' or 'csv'
+NUM_FLIGHT_RECORDS = 500
+MAX_RECORDS = 500000
+FILE_FORMAT = 'json'
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
-
-MINIO_BUCKET = 'warehouse'  # Shared bucket for both datasets
+MINIO_BUCKET = 'warehouse'
 timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
-# Correct Object Names
-#OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data.{FILE_FORMAT}"
+
 OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data_{timestamp}.{FILE_FORMAT}"
-
-#OBJECT_NAME_AIRPORT = f"bronze_layer/semi_structured_raw_data/airport_data/airports_data.{FILE_FORMAT}"
 OBJECT_NAME_AIRPORT = f"bronze_layer/semi_structured_raw_data/airport_data/airports_data_{timestamp}.{FILE_FORMAT}"
-# ====================================================
+OBJECT_NAME_FLIGHT = f"bronze_layer/semi_structured_raw_data/flight_data/flights_data_{timestamp}.{FILE_FORMAT}"
 
-# ---------- Airline Data Configuration ----------
 PREDEFINED_AIRLINES = [
     {"name": "American Airlines", "iata": "AA", "icao": "AAL", "callsign": "AMERICAN"},
     {"name": "Delta Air Lines", "iata": "DL", "icao": "DAL", "callsign": "DELTA"},
@@ -45,169 +40,94 @@ COUNTRIES = {
     "GB": {"name": "United Kingdom", "hubs": ["LHR", "LGW", "MAN"]},
     "IN": {"name": "India", "hubs": ["DEL", "BOM", "BLR"]},
 }
-AIRLINE_TYPES = ["scheduled", "charter", "cargo", "low-cost"]
 
-# ---------- Airline Generator ----------
+AIRLINE_TYPES = ["scheduled", "charter", "cargo", "low-cost"]
+AIRCRAFT_TYPES = ["Boeing 737", "Boeing 747", "Airbus A320", "Airbus A380", "Embraer E190", "Bombardier CRJ-900", "ATR 72"]
+
 class AirlineGenerator:
     def __init__(self):
         self.used_iata = set()
         self.used_icao = set()
-        self._init_code_pools()
-
-    def _init_code_pools(self):
-        for a in PREDEFINED_AIRLINES:
-            self.used_iata.add(a["iata"])
-            self.used_icao.add(a["icao"])
-        self.available_iata = [f"{a}{b}" for a, b in product(ascii_uppercase, repeat=2) if f"{a}{b}" not in self.used_iata]
-        self.available_icao = [f"{a}{b}{c}" for a, b, c in product(ascii_uppercase, repeat=3) if f"{a}{b}{c}" not in self.used_icao]
+        self.available_iata = [f"{a}{b}" for a, b in product(ascii_uppercase, repeat=2)]
+        self.available_icao = [f"{a}{b}{c}" for a, b, c in product(ascii_uppercase, repeat=3)]
         random.shuffle(self.available_iata)
         random.shuffle(self.available_icao)
 
-    def _get_codes(self, index):
-        if index < len(PREDEFINED_AIRLINES):
-            return PREDEFINED_AIRLINES[index]["iata"], PREDEFINED_AIRLINES[index]["icao"]
+    def generate_airline(self, index):
         iata = self.available_iata.pop()
         icao = self.available_icao.pop()
-        self.used_iata.add(iata)
-        self.used_icao.add(icao)
-        return iata, icao
-
-    def generate_airline(self, index):
-        iata, icao = self._get_codes(index)
-        if index < len(PREDEFINED_AIRLINES):
-            name = PREDEFINED_AIRLINES[index]["name"]
-            callsign = PREDEFINED_AIRLINES[index]["callsign"]
-        else:
-            country = random.choice(list(COUNTRIES.values()))["name"]
-            name = f"{country.split()[0]} {random.choice(['Air', 'Airways', 'Airlines'])}"
-            callsign = name.replace(" ", "").upper()[:8]
-
         country_code = random.choice(list(COUNTRIES.keys()))
         country = COUNTRIES[country_code]
-        hub = random.choice(country["hubs"])
-        founded = random.randint(1920, datetime.now().year - 1)
-        airline_age = datetime.now().year - founded
-        fleet_size = max(5, int(random.gauss(300 if founded < 1980 else 100, 200 if founded < 1980 else 80)))
-        avg_age = max(1, min(30, round(airline_age / random.uniform(8, 12), 1)))
+        name = f"{country['name'].split()[0]} {random.choice(['Air', 'Airways', 'Airlines'])}"
+        callsign = name.replace(" ", "").upper()[:8]
+        return {"id": str(1000000 + index), "name": name, "iata": iata, "icao": icao, "callsign": callsign, "country_code": country_code, "country": country['name'], "hub": random.choice(country['hubs']), "status": "active"}
 
-        return {
-            "id": str(1000000 + index),
-            "name": name,
-            "iata": iata,
-            "icao": icao,
-            "callsign": callsign,
-            "country_code": country_code,
-            "country": country["name"],
-            "hub": hub,
-            "founded": founded,
-            "fleet_size": fleet_size,
-            "fleet_age": avg_age,
-            "status": "active" if random.random() < 0.95 else "inactive",
-            "type": random.choice(AIRLINE_TYPES),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-
-# ---------- Airport Generator ----------
 class AirportGenerator:
     def __init__(self):
-        self.used_iata = set()
-        self.used_icao = set()
-        self.used_ids = set()
         self.available_iata = [f"{a}{b}{c}" for a, b, c in product(ascii_uppercase, repeat=3)]
         self.available_icao = [f"{a}{b}{c}{d}" for a, b, c, d in product(ascii_uppercase, repeat=4)]
         random.shuffle(self.available_iata)
         random.shuffle(self.available_icao)
 
-    def _get_codes(self):
+    def generate_airport(self, index):
         iata = self.available_iata.pop()
         icao = self.available_icao.pop()
-        self.used_iata.add(iata)
-        self.used_icao.add(icao)
-        return iata, icao
-
-    def _get_id(self):
-        new_id = str(random.randint(3000000, 4000000))
-        while new_id in self.used_ids:
-            new_id = str(random.randint(3000000, 4000000))
-        self.used_ids.add(new_id)
-        return new_id
-
-    def generate_airport(self, index):
-        iata, icao = self._get_codes()
         country_code = random.choice(list(COUNTRIES.keys()))
         country = COUNTRIES[country_code]
-        name = f"{country['name'].split()[0]} {random.choice(['International', 'Regional', 'Municipal', 'Airfield', 'Airport'])}"
+        name = f"{country['name'].split()[0]} {random.choice(['International', 'Regional', 'Airport'])}"
+        return {"id": str(2000000 + index), "airport_id": str(index + 1), "iata_code": iata, "icao_code": icao, "country_iso2": country_code, "country_name": country['name'], "airport_name": name}
 
-        return {
-            "id": self._get_id(),
-            "airport_id": str(index + 1),
-            "iata_code": iata,
-            "icao_code": icao,
-            "country_iso2": country_code,
-            "country_name": country["name"],
-            "latitude": str(round(random.uniform(-90, 90), 5)),
-            "longitude": str(round(random.uniform(-180, 180), 5)),
-            "airport_name": name,
-            "timezone": "UTC"
-        }
+class FlightGenerator:
+    def __init__(self, airline_iatas, airport_iatas):
+        self.airline_iatas = airline_iatas if airline_iatas else ["XX"]
+        self.airport_iatas = airport_iatas if airport_iatas else ["AAA"]
 
-# ---------- Helpers ----------
+    def generate_flight(self):
+        airline = random.choice(self.airline_iatas)
+        dep = random.choice(self.airport_iatas)
+        arr = random.choice([a for a in self.airport_iatas if a != dep] or [dep])
+        return {"flight_id": f"FL-{random.randint(100000,999999)}", "flight_number": f"{airline}{random.randint(100,999999)}", "airline_iata": airline, "departure_airport_iata": dep, "arrival_airport_iata": arr, "aircraft_type": random.choice(AIRCRAFT_TYPES), "distance_km": round(random.uniform(500, 12000), 2), "status": random.choice(["scheduled", "departed", "landed", "delayed", "cancelled"])}
+
 def load_existing_data(client, object_name):
     try:
         obj = client.get_object(MINIO_BUCKET, object_name)
-        content = obj.read()
-        return json.loads(content) if FILE_FORMAT == 'json' else list(csv.DictReader(content.decode().splitlines()))
-    except:
-        return []
+        return json.loads(obj.read())
+    except: return []
 
-# ---------- Airline Task ----------
 def generate_airline_data():
-    generator = AirlineGenerator()
-    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,secure=False)
-    if not client.bucket_exists(MINIO_BUCKET):
-        client.make_bucket(MINIO_BUCKET)
-    data = [generator.generate_airline(i) for i in range(NUM_AIRLINE_RECORDS)]
-    existing = load_existing_data(client, OBJECT_NAME_AIRLINE)
-    full_data = (existing + data)[-MAX_AIRLINE_RECORDS:]
-    byte_data = json.dumps(full_data, indent=2).encode('utf-8')
-    client.put_object(MINIO_BUCKET, OBJECT_NAME_AIRLINE, BytesIO(byte_data), len(byte_data), "application/json")
-    print(f"✅ Uploaded {len(full_data)} airline records to {OBJECT_NAME_AIRLINE}")
-
-# ---------- Airport Task ----------
-def generate_airport_data():
-    generator = AirportGenerator()
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    if not client.bucket_exists(MINIO_BUCKET):
-        client.make_bucket(MINIO_BUCKET)
-    data = [generator.generate_airport(i) for i in range(NUM_AIRPORT_RECORDS)]
-    existing = load_existing_data(client, OBJECT_NAME_AIRPORT)
-    full_data = (existing + data)[-MAX_AIRPORT_RECORDS:]
-    byte_data = json.dumps(full_data, indent=2).encode('utf-8')
-    client.put_object(MINIO_BUCKET, OBJECT_NAME_AIRPORT, BytesIO(byte_data), len(byte_data), "application/json")
-    print(f"✅ Uploaded {len(full_data)} airport records to {OBJECT_NAME_AIRPORT}")
+    if not client.bucket_exists(MINIO_BUCKET): client.make_bucket(MINIO_BUCKET)
+    data = [AirlineGenerator().generate_airline(i) for i in range(NUM_AIRLINE_RECORDS)]
+    client.put_object(MINIO_BUCKET, OBJECT_NAME_AIRLINE, BytesIO(json.dumps(data).encode()), len(json.dumps(data)), "application/json")
 
-# ========== Airflow DAG ==========
+def generate_airport_data():
+    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
+    if not client.bucket_exists(MINIO_BUCKET): client.make_bucket(MINIO_BUCKET)
+    data = [AirportGenerator().generate_airport(i) for i in range(NUM_AIRPORT_RECORDS)]
+    client.put_object(MINIO_BUCKET, OBJECT_NAME_AIRPORT, BytesIO(json.dumps(data).encode()), len(json.dumps(data)), "application/json")
+
+def generate_flight_data():
+    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
+    airlines = load_existing_data(client, OBJECT_NAME_AIRLINE)
+    airports = load_existing_data(client, OBJECT_NAME_AIRPORT)
+    airline_iatas = [a['iata'] for a in airlines]
+    airport_iatas = [a['iata_code'] for a in airports]
+    flights = [FlightGenerator(airline_iatas, airport_iatas).generate_flight() for _ in range(NUM_FLIGHT_RECORDS)]
+    client.put_object(MINIO_BUCKET, OBJECT_NAME_FLIGHT, BytesIO(json.dumps(flights).encode()), len(json.dumps(flights)), "application/json")
+
 default_args = {'owner': 'airflow', 'retries': 1, 'retry_delay': timedelta(minutes=5)}
 
 with DAG(
-    dag_id='injest_all_semi_strutured_data_from_api_to_minio',
+    dag_id='injest_airline_airport_flight_data_to_minio',
     default_args=default_args,
-    description='Generate Airline & Airport Data and Upload to MinIO (bronze layer)',
     schedule_interval='@daily',
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    tags=['data-generation', 'minio', 'airlines', 'airports']
+    tags=['data-generation', 'minio', 'airlines', 'airports', 'flights']
 ) as dag:
 
-    airline_task = PythonOperator(
-        task_id='generate_airline_data',
-        python_callable=generate_airline_data
-    )
+    t1 = PythonOperator(task_id='generate_airline_data', python_callable=generate_airline_data)
+    t2 = PythonOperator(task_id='generate_airport_data', python_callable=generate_airport_data)
+    t3 = PythonOperator(task_id='generate_flight_data', python_callable=generate_flight_data)
 
-    airport_task = PythonOperator(
-        task_id='generate_airport_data',
-        python_callable=generate_airport_data
-    )
-
-    airline_task >> airport_task  # Run airport task after airlines
-
+    t1 >> t2 >> t3
