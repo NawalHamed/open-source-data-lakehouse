@@ -4,4 +4,5 @@ requests
 minio
 python-dotenv
 pyarrow
+matplotlib
 apache-airflow-providers-docker==3.8.0
