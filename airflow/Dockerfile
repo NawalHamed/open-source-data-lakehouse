@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir \
     python-dotenv \
     pyarrow \
     Pillow \
-    faker
+    faker \
+    matplotlib
 
 # Return to airflow user for security best practices
 USER airflow
