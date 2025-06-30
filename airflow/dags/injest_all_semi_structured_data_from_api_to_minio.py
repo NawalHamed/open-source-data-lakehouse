@@ -21,10 +21,13 @@ MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
 
 MINIO_BUCKET = 'warehouse'  # Shared bucket for both datasets
-
+timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
 # Correct Object Names
-OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data.{FILE_FORMAT}"
-OBJECT_NAME_AIRPORT = f"bronze_layer/semi_structured_raw_data/airport_data/airports_data.{FILE_FORMAT}"
+#OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data.{FILE_FORMAT}"
+OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data_{timestamp}.{FILE_FORMAT}"
+
+#OBJECT_NAME_AIRPORT = f"bronze_layer/semi_structured_raw_data/airport_data/airports_data.{FILE_FORMAT}"
+OBJECT_NAME_AIRPORT = f"bronze_layer/semi_structured_raw_data/airport_data/airports_data_{timestamp}.{FILE_FORMAT}"
 # ====================================================
 
 # ---------- Airline Data Configuration ----------
