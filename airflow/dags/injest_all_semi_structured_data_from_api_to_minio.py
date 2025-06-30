@@ -160,7 +160,7 @@ def load_existing_data(client, object_name):
 # ---------- Airline Task ----------
 def generate_airline_data():
     generator = AirlineGenerator()
-    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_SECURE)
+    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY,secure=False)
     if not client.bucket_exists(MINIO_BUCKET):
         client.make_bucket(MINIO_BUCKET)
     data = [generator.generate_airline(i) for i in range(NUM_AIRLINE_RECORDS)]
@@ -173,7 +173,7 @@ def generate_airline_data():
 # ---------- Airport Task ----------
 def generate_airport_data():
     generator = AirportGenerator()
-    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_SECURE)
+    client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
     if not client.bucket_exists(MINIO_BUCKET):
         client.make_bucket(MINIO_BUCKET)
     data = [generator.generate_airport(i) for i in range(NUM_AIRPORT_RECORDS)]
