@@ -109,7 +109,7 @@ def generate_and_upload_airline_images():
             content_type="image/jpeg"
         )
 
-        print(f"✅ Uploaded airline table image: {filename}")
+        print(f"Uploaded airline table image: {filename}")
         time.sleep(1)
 
 
