@@ -15,7 +15,7 @@ MAX_AIRLINE_RECORDS = 500000
 NUM_AIRPORT_RECORDS = 50
 MAX_AIRPORT_RECORDS = 500
 FILE_FORMAT = 'json'  # Options: 'json' or 'csv'
-MINIO_ENDPOINT = 'minio:9000'
+MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
@@ -187,7 +187,7 @@ def generate_airport_data():
 default_args = {'owner': 'airflow', 'retries': 1, 'retry_delay': timedelta(minutes=5)}
 
 with DAG(
-    dag_id='injest_airline_and_airport_data_to_minio',
+    dag_id='injest_all_semi_strutured_data_from_api_to_minio',
     default_args=default_args,
     description='Generate Airline & Airport Data and Upload to MinIO (bronze layer)',
     schedule_interval='@daily',
