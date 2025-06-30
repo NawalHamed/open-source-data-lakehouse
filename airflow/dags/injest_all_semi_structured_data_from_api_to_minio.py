@@ -118,7 +118,7 @@ def generate_flight_data():
 default_args = {'owner': 'airflow', 'retries': 1, 'retry_delay': timedelta(minutes=5)}
 
 with DAG(
-    dag_id='injest_airline_airport_flight_data_to_minio',
+    dag_id='injest_all_semi_structured_data_from_api_to_minio',
     default_args=default_args,
     schedule_interval='@daily',
     start_date=datetime(2024, 1, 1),
