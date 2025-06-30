@@ -3,7 +3,7 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 from minio import Minio
 import pandas as pd
-import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import random
 import string
@@ -49,7 +49,41 @@ def generate_airline_data():
     return pd.DataFrame(data)
 
 
-# ============ Image Generator with Table ============
+# ============ Generate Table Image with Pillow ============
+def dataframe_to_image(df):
+    rows = df.shape[0]
+    cols = df.shape[1]
+    cell_height = 30
+    cell_width = 150
+
+    img_height = (rows + 1) * cell_height + 20
+    img_width = cols * cell_width + 20
+
+    image = Image.new("RGB", (img_width, img_height), "white")
+    draw = ImageDraw.Draw(image)
+
+    # Optional: Use default font or load a TTF font if available
+    try:
+        font = ImageFont.truetype("arial.ttf", 14)
+    except:
+        font = ImageFont.load_default()
+
+    # Draw header
+    for idx, col in enumerate(df.columns):
+        draw.text((idx * cell_width + 10, 10), str(col), fill="black", font=font)
+
+    # Draw rows
+    for row in range(rows):
+        for col in range(cols):
+            text = str(df.iloc[row, col])
+            x = col * cell_width + 10
+            y = (row + 1) * cell_height + 10
+            draw.text((x, y), text, fill="black", font=font)
+
+    return image
+
+
+# ============ Image Generator and Uploader ============
 def generate_and_upload_airline_images():
     """Generates table images of airline data and uploads to MinIO"""
 
@@ -58,17 +92,11 @@ def generate_and_upload_airline_images():
 
     for i in range(IMAGE_COUNT):
         df = generate_airline_data()
-        
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.axis('tight')
-        ax.axis('off')
-        table = ax.table(cellText=df.values, colLabels=df.columns, loc='center')
-        table.scale(1, 1.5)
+        image = dataframe_to_image(df)
 
         image_buffer = BytesIO()
-        plt.savefig(image_buffer, format='jpg', bbox_inches='tight')
+        image.save(image_buffer, format='JPEG')
         image_buffer.seek(0)
-        plt.close(fig)
 
         timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S")
         filename = f"airline_data_table_{timestamp}_{i}.jpg"
@@ -80,16 +108,16 @@ def generate_and_upload_airline_images():
             length=image_buffer.getbuffer().nbytes,
             content_type="image/jpeg"
         )
-        print(f"✅ Uploaded airline table image: {filename}")
 
-        time.sleep(1)  # Optional delay
+        print(f"✅ Uploaded airline table image: {filename}")
+        time.sleep(1)
 
 
 # ============ Airflow DAG ============
 with DAG(
     dag_id="generate_airline_table_images_to_minio",
     default_args=DEFAULT_ARGS,
-    description="Generate airline data tables as images and upload to MinIO",
+    description="Generate airline data tables as images with Pillow and upload to MinIO",
     schedule_interval="@daily",
     start_date=datetime(2024, 1, 1),
     catchup=False,
