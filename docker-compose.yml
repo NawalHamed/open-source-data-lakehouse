@@ -219,7 +219,7 @@ services:
       - shared-network
     restart: always
 
-  cloudbeaver:
+  cloudbeaver: #username: admin123 password:Admin@123
     container_name: cdlakehouse
     image: dbeaver/cloudbeaver:latest
     restart: always
@@ -231,6 +231,7 @@ services:
       - cloudbeaver-config:/opt/cloudbeaver/workspace
     networks:
       - shared-network
+    
 
 volumes:
   postgres_data:
