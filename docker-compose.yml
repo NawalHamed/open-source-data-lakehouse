@@ -30,7 +30,7 @@ services:
       VIRTUAL_HOST: nessie.rihal.dev
       VIRTUAL_PORT: 19120
       nessie.version.store.type: rocksdb
-      nessie.version.store.persist: "true"
+      #nessie.version.store.persist: "true"
     volumes:
       - nessie_data:/mnt/nessie
     networks:
