@@ -32,7 +32,7 @@ weather_df.printSchema()
 weather_df.show(5)
 
 print(" Writing Weather Data to Iceberg...")
-weather_df.writeTo("nessie.silver_layer.weather_data").append()
+weather_df.writeTo("nessie.silver_layer.weather_data").createOrReplace()
 
 # ----------- COUNTRIES DATA ---------------
 print(" Loading Countries Data...")
@@ -45,7 +45,7 @@ countries_df.printSchema()
 countries_df.show(5)
 
 print(" Writing Countries Data to Iceberg...")
-countries_df.writeTo("nessie.silver_layer.countries_data").append()
+countries_df.writeTo("nessie.silver_layer.countries_data").createOrReplace()
 
 # ----------- CITIES DATA ---------------
 print(" Loading Cities Data...")
@@ -58,7 +58,7 @@ cities_df.printSchema()
 cities_df.show(5)
 
 print(" Writing Cities Data to Iceberg...")
-cities_df.writeTo("nessie.silver_layer.cities_data").append()
+cities_df.writeTo("nessie.silver_layer.cities_data").createOrReplace()
 
 # Step 4: Verify
 print(" Sample from Silver Layer Tables:")
