@@ -16,7 +16,7 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# Step 2: Read image metadata
+# Step 2: Read image metadata (works at pixel level; it doesn't extract visual text)
 image_df = spark.read.format("image") \
     .load("s3a://warehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
     .withColumn("file_name", regexp_replace(input_file_name(), ".*/", "")) \
