@@ -29,7 +29,7 @@ services:
       QUARKUS_HTTP_PORT: 19120
       VIRTUAL_HOST: nessie.rihal.dev
       VIRTUAL_PORT: 19120
-      NESSIE_VERSION_STORE_TYPE: ROCKS
+      NESSIE_VERSION_STORE_TYPE: rocksdb
       NESSIE_VERSION_STORE_PERSIST: "true"
     volumes:
       - nessie_data:/mnt/nessie
