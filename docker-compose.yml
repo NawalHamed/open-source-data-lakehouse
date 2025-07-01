@@ -21,23 +21,6 @@ services:
       - shared-network
     restart: always
 
-  mc:
-    image: minio/mc
-    container_name: mc
-    depends_on:
-      - minio
-    entrypoint:
-      - /bin/sh
-      - "-c"
-      - |
-        until mc config host add local http://minio_v:9009 minioadmin minioadmin; do sleep 1; done
-        mc mb local/warehouse
-        mc policy set public local/warehouse
-        tail -f /dev/null
-    networks:
-      - shared-network
-    restart: always
-
   nessie:
     image: projectnessie/nessie:latest
     container_name: nessie
