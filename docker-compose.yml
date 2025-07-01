@@ -23,7 +23,8 @@ services:
     restart: always
 
   nessie:
-    image: projectnessie/nessie:latest
+    #image: projectnessie/nessie:latest
+    image: projectnessie/nessie:0.69.2
     container_name: nessie
     environment:
       QUARKUS_HTTP_PORT: 19120
