@@ -18,12 +18,19 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # ================= Read Silver Layer Tables =================
-flight_df = spark.read.format("iceberg").load("nessie.silver_layer.flight_data")
-airline_df = spark.read.format("iceberg").load("nessie.silver_layer.airline_data")
-airport_df = spark.read.format("iceberg").load("nessie.silver_layer.airport_data")
-countries_df = spark.read.format("iceberg").load("nessie.silver_layer.countries_data")
-cities_df = spark.read.format("iceberg").load("nessie.silver_layer.cities_data")
-weather_df = spark.read.format("iceberg").load("nessie.silver_layer.weather_data")
+#flight_df = spark.read.format("iceberg").load("nessie.silver_layer.flight_data")
+#airline_df = spark.read.format("iceberg").load("nessie.silver_layer.airline_data")
+#airport_df = spark.read.format("iceberg").load("nessie.silver_layer.airport_data")
+#countries_df = spark.read.format("iceberg").load("nessie.silver_layer.countries_data")
+#cities_df = spark.read.format("iceberg").load("nessie.silver_layer.cities_data")
+#weather_df = spark.read.format("iceberg").load("nessie.silver_layer.weather_data")
+
+flight_df = spark.table("nessie.silver_layer.flight_data")
+airline_df = spark.table("nessie.silver_layer.airline_data")
+airport_df = spark.table("nessie.silver_layer.airport_data")
+countries_df = spark.table("nessie.silver_layer.countries_data")
+cities_df = spark.table("nessie.silver_layer.cities_data")
+weather_df = spark.table("nessie.silver_layer.weather_data")
 
 # ================== 1. Flight Performance Summary in Iceberg ==================
 flight_perf_df = flight_df.join(airline_df, flight_df.airline_iata == airline_df.iata, "left") \
