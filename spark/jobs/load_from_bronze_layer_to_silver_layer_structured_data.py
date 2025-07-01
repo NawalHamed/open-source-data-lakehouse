@@ -32,7 +32,7 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 # Step 4: Write to Iceberg table
 #csv_df.writeTo("nessie.silver_layer.weather_data").createOrReplace()
 
-csv_df.writeTo("nessie.silver_layer.weather_data").createOrReplace()
+csv_df.writeTo("nessie.silver_layer.weather_data").append()
 
 
 # Step 5: Verify
