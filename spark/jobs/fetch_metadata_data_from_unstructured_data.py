@@ -1,14 +1,14 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import input_file_name, regexp_replace
-import pytesseract
 from PIL import Image
+import cv2
 import numpy as np
 import io
 import pandas as pd
 
 # Step 1: SparkSession with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
-    .appName("Image Metadata + Decoded Text to Iceberg") \
+    .appName("Image Metadata + Decoded Data to Iceberg") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
@@ -36,9 +36,9 @@ image_data_list = image_df.select(
     "image.data"
 ).collect()
 
-print(f"\nDecoding {len(image_data_list)} images:\n")
+print(f"\nProcessing {len(image_data_list)} images:\n")
 
-# Step 4: Decode image, extract text, combine with metadata
+# Step 4: Decode image, validate, combine with metadata
 results = []
 for row in image_data_list:
     origin = row["origin"]
@@ -49,24 +49,21 @@ for row in image_data_list:
     binary_data = row["data"]
 
     try:
-        img = Image.open(io.BytesIO(binary_data))
-        extracted_text = pytesseract.image_to_string(img)
+        # Decode binary to NumPy array
+        np_array = np.frombuffer(binary_data, np.uint8)
+        img_cv2 = cv2.imdecode(np_array, cv2.IMREAD_UNCHANGED)
+
+        # Check if valid image
+        if img_cv2 is not None:
+            decoded_status = "SUCCESS - Image decoded"
+        else:
+            decoded_status = "ERROR - Invalid image data"
+
     except Exception as e:
-        extracted_text = f"ERROR decoding: {str(e)}"
+        decoded_status = f"ERROR decoding: {str(e)}"
 
-    print(f"Image: {origin}\nExtracted Text: {extracted_text}\n{'='*50}")
+    print(f"Image: {origin}\nStatus: {decoded_status}\n{'='*50}")
 
-    results.append((origin, height, width, channels, mode, extracted_text))
+    results.append((origin, height, width, channels, mode, decoded_status))
 
-# Step 5: Convert to Pandas, then Spark DataFrame
-df_results = pd.DataFrame(results, columns=["file_path", "height", "width", "channels", "mode", "extracted_text"])
-final_df = spark.createDataFrame(df_results)
-
-# Step 6: Create namespace if not exists
-spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
-
-# Step 7: Write to Iceberg with Metadata + Decoded Text
-final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace()
-
-# Step 8: Validate - Show saved data
-spark.read.table("nessie.silver_layer.image_metadata_with_text").show(truncate=False)
+# Step 5: Convert to Pandas, t
