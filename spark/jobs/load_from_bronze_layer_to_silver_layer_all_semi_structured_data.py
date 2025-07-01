@@ -38,9 +38,9 @@ df_flight.show(5, truncate=False)
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # Step 5: Write to Iceberg Silver layer tables
-df_airline.writeTo("nessie.silver_layer.airline_data").createOrReplace()
-df_airport.writeTo("nessie.silver_layer.airport_data").createOrReplace()
-df_flight.writeTo("nessie.silver_layer.flight_data").createOrReplace()
+df_airline.writeTo("nessie.silver_layer.airline_data").append()
+df_airport.writeTo("nessie.silver_layer.airport_data").append()
+df_flight.writeTo("nessie.silver_layer.flight_data").append()
 
 # Step 6: Verify Silver Tables
 print("=== Verify Airline Silver ===")
