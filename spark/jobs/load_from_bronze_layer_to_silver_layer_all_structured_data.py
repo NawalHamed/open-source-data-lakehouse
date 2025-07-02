@@ -18,14 +18,14 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 
-try:
-    spark.sql("CREATE BRANCH dev IN nessie AT main")
-    print("Dev branch created.")
-except Exception as e:
-    print(f"Branch likely already exists or error: {e}")
+#try:
+#    spark.sql("CREATE BRANCH dev IN nessie AT main")
+#    print("Dev branch created.")
+#except Exception as e:
+#    print(f"Branch likely already exists or error: {e}")
 
 # Step 3: Switch to dev branch
-spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
+#spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
 
 
 
