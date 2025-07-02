@@ -19,7 +19,7 @@ MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
-MINIO_BUCKET = 'warehouse'
+MINIO_BUCKET = 'lakehouse'
 timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
 
 OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data_{timestamp}.{FILE_FORMAT}"
