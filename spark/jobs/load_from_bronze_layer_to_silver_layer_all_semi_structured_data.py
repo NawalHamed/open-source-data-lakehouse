@@ -48,6 +48,16 @@ df_flight_clean = df_flight \
 # Step 4: Create namespace if needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
+spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
+
+df_new = spark.createDataFrame([
+    (3, "Nizwa", 33.1)
+], ["id", "city", "temperature"])
+
+df_new.writeTo("nessie.silver_layer.weather_data").append()
+
+
+
 # Step 5: Write to Iceberg Silver layer tables
 
 try:
