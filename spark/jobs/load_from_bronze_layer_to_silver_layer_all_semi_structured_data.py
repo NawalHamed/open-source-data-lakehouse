@@ -29,14 +29,16 @@ df_airline_clean = df_airline \
     .na.fill({"name": "UNKNOWN", "country": "UNKNOWN", "iata_code": "XXX"}) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
-    .withColumn("iata_code", upper(trim(col("iata_code")))))
+    .withColumn("iata_code", upper(trim(col("iata_code")))) \
+    .dropDuplicates())
 
 # Airport Dataset
 df_airport_clean = df_airport \
     .na.fill({"country": "UNKNOWN", "city": "UNKNOWN", "iata_code": "XXX"}) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("city", initcap(trim(col("city")))) \
-    .withColumn("iata_code", upper(trim(col("iata_code")))))
+    .withColumn("iata_code", upper(trim(col("iata_code")))) \
+    .dropDuplicates())
 
 # Flight Dataset
 df_flight_clean = df_flight \
