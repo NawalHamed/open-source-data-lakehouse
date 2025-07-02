@@ -24,6 +24,12 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 print("Loading Weather Data...")
 weather_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/weather_data/*.csv")
 
+
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.weather_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.countries_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.cities_data")
+
+
 # Cleaning
 weather_df_clean = weather_df \
     .na.fill({"weather_desc": "UNKNOWN", "city": "UNKNOWN"}) \
@@ -37,6 +43,7 @@ weather_df_clean.show(5)
 print("Writing Weather Data to Iceberg...")
 weather_df_clean.writeTo("nessie.silver_layer.weather_data").createOrReplace()
 #weather_df_clean.writeTo("nessie.silver_layer.weather_data").append()
+
 
 # ----------- COUNTRIES DATA ---------------
 print("Loading Countries Data...")
@@ -55,6 +62,7 @@ countries_df_clean.show(5)
 print("Writing Countries Data to Iceberg...")
 countries_df_clean.writeTo("nessie.silver_layer.countries_data").createOrReplace()
 #countries_df_clean.writeTo("nessie.silver_layer.countries_data").append()
+
 
 # ----------- CITIES DATA ---------------
 print("Loading Cities Data...")
