@@ -1,10 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import input_file_name, regexp_replace
 from PIL import Image
-import cv2
 import numpy as np
 import io
 import pandas as pd
+import matplotlib.pyplot as plt
 
 # Step 1: SparkSession with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
@@ -38,7 +38,7 @@ image_data_list = image_df.select(
 
 print(f"\nProcessing {len(image_data_list)} images:\n")
 
-# Step 4: Decode image, validate, combine with metadata
+# Step 4: Decode image with Pillow, validate with Matplotlib
 results = []
 for row in image_data_list:
     origin = row["origin"]
@@ -49,15 +49,18 @@ for row in image_data_list:
     binary_data = row["data"]
 
     try:
-        # Decode binary to NumPy array
-        np_array = np.frombuffer(binary_data, np.uint8)
-        img_cv2 = cv2.imdecode(np_array, cv2.IMREAD_UNCHANGED)
+        # Decode binary to image using Pillow
+        img = Image.open(io.BytesIO(binary_data))
 
-        # Check if valid image
-        if img_cv2 is not None:
-            decoded_status = "SUCCESS - Image decoded"
-        else:
-            decoded_status = "ERROR - Invalid image data"
+        # Optional: Validate by converting to NumPy array
+        img_array = np.array(img)
+
+        decoded_status = f"SUCCESS - Decoded Image Shape: {img_array.shape}"
+
+        # Optional Visualization (Comment out in production)
+        # plt.imshow(img)
+        # plt.title(f"{origin}")
+        # plt.show()
 
     except Exception as e:
         decoded_status = f"ERROR decoding: {str(e)}"
@@ -66,4 +69,15 @@ for row in image_data_list:
 
     results.append((origin, height, width, channels, mode, decoded_status))
 
-# Step 5: Convert to Pandas, t
+# Step 5: Convert to Pandas, then Spark DataFrame
+df_results = pd.DataFrame(results, columns=["file_path", "height", "width", "channels", "mode", "decode_status"])
+final_df = spark.createDataFrame(df_results)
+
+# Step 6: Create namespace if not exists
+spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
+
+# Step 7: Write to Iceberg with Metadata + Decoded Status
+final_df.writeTo("nessie.silver_layer.image_metadata_with_status").createOrReplace()
+
+# Step 8: Validate - Show saved data
+spark.read.table("nessie.silver_layer.image_metadata_with_status").show(truncate=False)
