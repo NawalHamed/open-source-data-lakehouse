@@ -26,8 +26,8 @@ weather_df = spark.read.option("header", True).option("inferSchema", True).csv("
 
 # Cleaning
 weather_df_clean = weather_df \
-    .na.fill({"weather_condition": "UNKNOWN", "city": "UNKNOWN"}) \
-    .withColumn("weather_condition", upper(trim(col("weather_condition")))) \
+    .na.fill({"weather_desc": "UNKNOWN", "city": "UNKNOWN"}) \
+    .withColumn("weather_desc", upper(trim(col("weather_desc")))) \
     .withColumn("city", initcap(trim(col("city")))) \
     .dropDuplicates()
 
@@ -44,9 +44,9 @@ countries_df = spark.read.option("header", True).option("inferSchema", True).csv
 
 # Cleaning
 countries_df_clean = countries_df \
-    .na.fill({"country_name": "UNKNOWN", "iso_code": "XXX"}) \
-    .withColumn("country_name", initcap(trim(col("country_name")))) \
-    .withColumn("iso_code", upper(trim(col("iso_code")))) \
+    .na.fill({"name": "UNKNOWN", "iso_code": "XXX"}) \
+    .withColumn("name", initcap(trim(col("name")))) \
+    .withColumn("iso2", upper(trim(col("iso2")))) \
     .dropDuplicates()
 
 countries_df_clean.printSchema()
@@ -64,7 +64,6 @@ cities_df = spark.read.option("header", True).option("inferSchema", True).csv("s
 cities_df_clean = cities_df \
     .na.fill({"city_name": "UNKNOWN", "country": "UNKNOWN"}) \
     .withColumn("city_name", initcap(trim(col("city_name")))) \
-    .withColumn("country", upper(trim(col("country")))) \
     .dropDuplicates()
 
 cities_df_clean.printSchema()
