@@ -22,7 +22,7 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 # ----------- WEATHER DATA ---------------
 print("Loading Weather Data...")
-weather_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://warehouse/bronze_layer/structured_raw_data/weather_data/*.csv")
+weather_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/weather_data/*.csv")
 
 # Cleaning
 weather_df_clean = weather_df \
@@ -40,7 +40,7 @@ weather_df_clean.writeTo("nessie.silver_layer.weather_data").append()
 
 # ----------- COUNTRIES DATA ---------------
 print("Loading Countries Data...")
-countries_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://warehouse/bronze_layer/structured_raw_data/countries_data/*.csv")
+countries_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/countries_data/*.csv")
 
 # Cleaning
 countries_df_clean = countries_df \
@@ -58,7 +58,7 @@ countries_df_clean.writeTo("nessie.silver_layer.countries_data").append()
 
 # ----------- CITIES DATA ---------------
 print("Loading Cities Data...")
-cities_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://warehouse/bronze_layer/structured_raw_data/cities_data/*.csv")
+cities_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/cities_data/*.csv")
 
 # Cleaning
 cities_df_clean = cities_df \
