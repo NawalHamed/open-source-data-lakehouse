@@ -20,6 +20,9 @@ spark = SparkSession.builder \
 # Step 2: Create namespace if needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
+spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
+
+
 # ----------- WEATHER DATA ---------------
 print("Loading Weather Data...")
 weather_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/weather_data/*.csv")
