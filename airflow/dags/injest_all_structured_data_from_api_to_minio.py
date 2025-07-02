@@ -17,7 +17,7 @@ NUM_CITIES = 200
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
-MINIO_BUCKET = 'warehouse'
+MINIO_BUCKET = 'lakehouse'
 FILE_FORMAT = 'csv'
 
 timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
