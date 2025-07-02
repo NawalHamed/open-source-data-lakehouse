@@ -26,7 +26,7 @@ df_flight = spark.read.option("multiline", "true").json("s3a://warehouse/bronze_
 
 # Airline Dataset
 df_airline_clean = df_airline \
-    .na.fill({"name": "UNKNOWN", "country": "UNKNOWN", "iata_code": "XXX"}) \
+    .na.fill({"name": "UNKNOWN", "country": "UNKNOWN", "iata": "XXX"}) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("iata", upper(trim(col("iata")))) \
@@ -34,7 +34,7 @@ df_airline_clean = df_airline \
 
 # Airport Dataset
 df_airport_clean = df_airport \
-    .na.fill({"country": "UNKNOWN", "city": "UNKNOWN", "iata_code": "XXX"}) \
+    .na.fill({"country": "UNKNOWN", "city": "UNKNOWN", "iata": "XXX"}) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("city", initcap(trim(col("city")))) \
     .withColumn("iata", upper(trim(col("iata")))) \
