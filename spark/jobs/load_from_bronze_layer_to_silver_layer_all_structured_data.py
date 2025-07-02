@@ -25,9 +25,9 @@ print("Loading Weather Data...")
 weather_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/weather_data/*.csv")
 
 
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.weather_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.countries_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.cities_data")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.weather_data")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.countries_data")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.cities_data")
 
 
 # Cleaning
@@ -41,8 +41,8 @@ weather_df_clean.printSchema()
 weather_df_clean.show(5)
 
 print("Writing Weather Data to Iceberg...")
-weather_df_clean.writeTo("nessie.silver_layer.weather_data").createOrReplace()
-#weather_df_clean.writeTo("nessie.silver_layer.weather_data").append()
+#weather_df_clean.writeTo("nessie.silver_layer.weather_data").createOrReplace()
+weather_df_clean.writeTo("nessie.silver_layer.weather_data").append()
 
 
 # ----------- COUNTRIES DATA ---------------
@@ -60,8 +60,8 @@ countries_df_clean.printSchema()
 countries_df_clean.show(5)
 
 print("Writing Countries Data to Iceberg...")
-countries_df_clean.writeTo("nessie.silver_layer.countries_data").createOrReplace()
-#countries_df_clean.writeTo("nessie.silver_layer.countries_data").append()
+#countries_df_clean.writeTo("nessie.silver_layer.countries_data").createOrReplace()
+countries_df_clean.writeTo("nessie.silver_layer.countries_data").append()
 
 
 # ----------- CITIES DATA ---------------
@@ -78,8 +78,8 @@ cities_df_clean.printSchema()
 cities_df_clean.show(5)
 
 print("Writing Cities Data to Iceberg...")
-cities_df_clean.writeTo("nessie.silver_layer.cities_data").createOrReplace()
-#cities_df_clean.writeTo("nessie.silver_layer.cities_data").append()
+#cities_df_clean.writeTo("nessie.silver_layer.cities_data").createOrReplace()
+cities_df_clean.writeTo("nessie.silver_layer.cities_data").append()
 
 # Step 4: Verify
 print("\nSample from Silver Layer Tables:")
