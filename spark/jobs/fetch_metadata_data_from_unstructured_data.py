@@ -1,9 +1,9 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import input_file_name, regexp_replace
+from pyspark.sql.types import StructType, StructField, StringType
 from PIL import Image
 import numpy as np
 import io
-import pandas as pd
 
 # Step 1: SparkSession with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
@@ -25,12 +25,11 @@ image_df = spark.read.format("binaryFile") \
     .load("s3a://warehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
     .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
 
-# Step 3: Collect for decoding
+# Step 3: Collect and decode with Pillow
 image_data_list = image_df.collect()
 
 print(f"\nProcessing {len(image_data_list)} images:\n")
 
-# Step 4: Decode with Pillow
 results = []
 for row in image_data_list:
     file_path = row["path"]
@@ -46,13 +45,18 @@ for row in image_data_list:
     print(f"Image: {file_path}\nStatus: {decode_status}\n{'='*50}")
     results.append((file_path, decode_status))
 
-# Step 5: Pandas to Spark conversion (ensure correct pandas version)
-df_results = pd.DataFrame(results, columns=["file_path", "decode_status"])
-final_df = spark.createDataFrame(df_results)
+# Step 4: Create Spark DataFrame without pandas
+schema = StructType([
+    StructField("file_path", StringType(), True),
+    StructField("decode_status", StringType(), True)
+])
 
-# Step 6: Write to Iceberg
+final_df = spark.createDataFrame(results, schema=schema)
+
+# Step 5: Write to Iceberg Table
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
+
 final_df.writeTo("nessie.silver_layer.image_metadata_with_status").createOrReplace()
 
-# Step 7: Validate
+# Step 6: Validate
 spark.read.table("nessie.silver_layer.image_metadata_with_status").show(truncate=False)
