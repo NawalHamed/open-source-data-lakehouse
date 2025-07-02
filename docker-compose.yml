@@ -133,7 +133,7 @@ services:
     # build:
     #   context: ./airflow
     #   dockerfile: Dockerfile
-    image: airflow:06-11-2024-p2
+    image: open-source-data-lakehouse-airflow:latest
     container_name: airflow
     depends_on:
       - spark-master
