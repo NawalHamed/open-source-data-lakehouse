@@ -20,7 +20,7 @@ spark = SparkSession.builder \
 # Step 2: Create namespace if needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
+#spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
 
 
 # ----------- WEATHER DATA ---------------
