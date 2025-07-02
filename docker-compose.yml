@@ -26,15 +26,22 @@ services:
     #image: projectnessie/nessie:latest
     image: projectnessie/nessie:0.69.2
     container_name: nessie
+    depends_on:
+      - postgres
     environment:
       QUARKUS_HTTP_PORT: 19120
       VIRTUAL_HOST: nessie.rihal.dev
       VIRTUAL_PORT: 19120
-      nessie.version.store.type: rocksdb
+      #nessie.version.store.type: rocksdb
       #nessie.version.store.persist: "true"
+      QUARKUS_DATASOURCE_JDBC_URL: "jdbc:postgresql://postgres_v:5432/airflow" # Using existing airflow DB
+      QUARKUS_DATASOURCE_USERNAME: airflow
+      QUARKUS_DATASOURCE_PASSWORD: airflow
+      QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
+      nessie.version.store.type: jdbc
     volumes:
-      #- nessie_data:/mnt/nessie
-      - ./nessie-data:/var/lib/nessie
+      - nessie_data:/mnt/nessie
+      #- ./nessie-data:/var/lib/nessie
     networks:
       - shared-network
     restart: always
