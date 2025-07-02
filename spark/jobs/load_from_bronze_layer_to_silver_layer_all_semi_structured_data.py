@@ -50,9 +50,11 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
 spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
 
+
 df_new = spark.createDataFrame([
-    (3, "Nizwa", 33.1)
-], ["id", "city", "temperature"])
+    (4, "Sohar", "Oman", "Al Batinah", 36.5, 55, 12.0, "Sunny", "2025-07-02 15:00:00")
+], ["id", "city", "country", "region", "temperature_c", "humidity", "wind_speed_kmh", "weather_desc", "timestamp"])
+
 
 df_new.writeTo("nessie.silver_layer.weather_data").append()
 
