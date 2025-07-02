@@ -4,7 +4,6 @@ from PIL import Image
 import numpy as np
 import io
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Step 1: SparkSession with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
@@ -21,63 +20,41 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# Step 2: Read images including binary data
-image_df = spark.read.format("image") \
+# Step 2: Read images as raw binary files
+image_df = spark.read.format("binaryFile") \
     .load("s3a://warehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
     .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
 
 # Step 3: Collect to driver for decoding (safe for moderate datasets)
-image_data_list = image_df.select(
-    "image.origin",
-    "image.height",
-    "image.width",
-    "image.nChannels",
-    "image.mode",
-    "image.data"
-).collect()
+image_data_list = image_df.collect()
 
 print(f"\nProcessing {len(image_data_list)} images:\n")
 
-# Step 4: Decode image with Pillow, validate with Matplotlib
+# Step 4: Decode image with Pillow, validate shape, combine with metadata
 results = []
 for row in image_data_list:
-    origin = row["origin"]
-    height = row["height"]
-    width = row["width"]
-    channels = row["nChannels"]
-    mode = row["mode"]
-    binary_data = row["data"]
+    file_path = row["path"]
+    binary_data = row["content"]
 
     try:
-        # Decode binary to image using Pillow
         img = Image.open(io.BytesIO(binary_data))
-
-        # Optional: Validate by converting to NumPy array
         img_array = np.array(img)
-
-        decoded_status = f"SUCCESS - Decoded Image Shape: {img_array.shape}"
-
-        # Optional Visualization (Comment out in production)
-        # plt.imshow(img)
-        # plt.title(f"{origin}")
-        # plt.show()
-
+        decode_status = f"SUCCESS - Shape: {img_array.shape}"
     except Exception as e:
-        decoded_status = f"ERROR decoding: {str(e)}"
+        decode_status = f"ERROR decoding: {str(e)}"
 
-    print(f"Image: {origin}\nStatus: {decoded_status}\n{'='*50}")
+    print(f"Image: {file_path}\nStatus: {decode_status}\n{'='*50}")
+    results.append((file_path, decode_status))
 
-    results.append((origin, height, width, channels, mode, decoded_status))
-
-# Step 5: Convert to Pandas, then Spark DataFrame
-df_results = pd.DataFrame(results, columns=["file_path", "height", "width", "channels", "mode", "decode_status"])
+# Step 5: Convert to Pandas, then Spark DataFrame (Ensure Pandas <2.0 if using Spark 3.3.x)
+df_results = pd.DataFrame(results, columns=["file_path", "decode_status"])
 final_df = spark.createDataFrame(df_results)
 
 # Step 6: Create namespace if not exists
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-# Step 7: Write to Iceberg with Metadata + Decoded Status
+# Step 7: Write to Iceberg with file path and decode status
 final_df.writeTo("nessie.silver_layer.image_metadata_with_status").createOrReplace()
 
-# Step 8: Validate - Show saved data
+# Step 8: Validate saved data
 spark.read.table("nessie.silver_layer.image_metadata_with_status").show(truncate=False)
