@@ -18,9 +18,9 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Step 2: Read JSON data from MinIO
-df_airline = spark.read.option("multiline", "true").json("s3a://warehouse/bronze_layer/semi_structured_raw_data/airline_data/*.json")
-df_airport = spark.read.option("multiline", "true").json("s3a://warehouse/bronze_layer/semi_structured_raw_data/airport_data/*.json")
-df_flight = spark.read.option("multiline", "true").json("s3a://warehouse/bronze_layer/semi_structured_raw_data/flight_data/*.json")
+df_airline = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/semi_structured_raw_data/airline_data/*.json")
+df_airport = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/semi_structured_raw_data/airport_data/*.json")
+df_flight = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/semi_structured_raw_data/flight_data/*.json")
 
 # Step 3: Cleaning and Transformation
 
