@@ -33,7 +33,8 @@ services:
       nessie.version.store.type: rocksdb
       #nessie.version.store.persist: "true"
     volumes:
-      - nessie_data:/mnt/nessie
+      #- nessie_data:/mnt/nessie
+      - ./nessie-data:/var/lib/nessie
     networks:
       - shared-network
     restart: always
