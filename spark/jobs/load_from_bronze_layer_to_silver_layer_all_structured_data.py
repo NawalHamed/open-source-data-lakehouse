@@ -44,7 +44,7 @@ countries_df = spark.read.option("header", True).option("inferSchema", True).csv
 
 # Cleaning
 countries_df_clean = countries_df \
-    .na.fill({"name": "UNKNOWN", "iso_code": "XXX"}) \
+    .na.fill({"name": "UNKNOWN", "iso2": "XXX"}) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("iso2", upper(trim(col("iso2")))) \
     .dropDuplicates()
