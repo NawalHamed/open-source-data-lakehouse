@@ -51,19 +51,23 @@ spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 # Step 5: Write to Iceberg Silver layer tables
 
 try:
-    spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
-    spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
-    spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
+    #spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
+    #spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
+    #spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
     
-    print("table drops successfully.")
+    #print("table drops successfully.")
 
-    df_airline_clean.writeTo("nessie.silver_layer.airline_data") \
-    .option("location", "s3a://lakehouse/silver_layer/airline_data") \
-    .createOrReplace()
+    #df_airline_clean.writeTo("nessie.silver_layer.airline_data") \
+    #.option("location", "s3a://lakehouse/silver_layer/airline_data") \
+    #.createOrReplace()
 
     #df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
-    df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
-    df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
+    #df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
+    #df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
+    df_airline_clean.writeTo("nessie.silver_layer.airline_data").append()
+    df_airport_clean.writeTo("nessie.silver_layer.airport_data").append()
+    df_flight_clean.writeTo("nessie.silver_layer.flight_data").append()
+
 
     print("table written successfully.")
 except Exception as e:
