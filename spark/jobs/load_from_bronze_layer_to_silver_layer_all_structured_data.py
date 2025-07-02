@@ -62,7 +62,7 @@ cities_df = spark.read.option("header", True).option("inferSchema", True).csv("s
 
 # Cleaning
 cities_df_clean = cities_df \
-    .na.fill({"city_name": "UNKNOWN", "country": "UNKNOWN"}) \
+    .na.fill({"city_name": "UNKNOWN", "country_iso2": "UNKNOWN"}) \
     .withColumn("city_name", initcap(trim(col("city_name")))) \
     .dropDuplicates()
 
