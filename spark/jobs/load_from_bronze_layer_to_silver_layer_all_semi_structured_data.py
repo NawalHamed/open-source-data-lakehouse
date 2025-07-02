@@ -30,24 +30,21 @@ df_airline_clean = df_airline \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("iata_code", upper(trim(col("iata_code")))) \
-    .dropDuplicates())
+    .dropDuplicates()
 
 # Airport Dataset
 df_airport_clean = df_airport \
     .na.fill({"country": "UNKNOWN", "city": "UNKNOWN", "iata_code": "XXX"}) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("city", initcap(trim(col("city")))) \
-    .withColumn("iata_code", upper(trim(col("iata_code")))) \
-    .dropDuplicates())
+    .withColumn("iata", upper(trim(col("iata")))) \
+    .dropDuplicates()
 
 # Flight Dataset
 df_flight_clean = df_flight \
     .na.fill({"status": "UNKNOWN"}) \
     .withColumn("flight_number", upper(trim(col("flight_number")))) \
-    .withColumn("departure_time", to_timestamp(trim(col("departure_time")), "yyyy-MM-dd HH:mm:ss")) \
-    .withColumn("arrival_time", to_timestamp(trim(col("arrival_time")), "yyyy-MM-dd HH:mm:ss")) \
-    .filter(col("departure_time").isNotNull() & col("arrival_time").isNotNull()) \
-    .dropDuplicates(["flight_number", "departure_time"])
+    .dropDuplicates()
 
 # Step 4: Create namespace if needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
