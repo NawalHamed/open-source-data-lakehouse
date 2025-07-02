@@ -130,10 +130,10 @@ services:
     restart: always
 
   airflow:
-    build:
-      context: ./airflow
-      dockerfile: Dockerfile
-    #image: airflow:latest
+    # build:
+    #   context: ./airflow
+    #   dockerfile: Dockerfile
+    image: airflow:06-11-2024-p2
     container_name: airflow
     depends_on:
       - spark-master
