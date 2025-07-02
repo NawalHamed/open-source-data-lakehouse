@@ -8,7 +8,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
-    .config("spark.sql.catalog.nessie.ref", "dev") \
+    .config("spark.sql.catalog.nessie.ref", "main") \
     .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
     .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
@@ -17,10 +17,23 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
+
+
+# Step 2: Create dev branch if not exists
+branches = spark.sql("LIST REFERENCES IN nessie").toPandas()
+if "dev" not in branches['name'].values:
+    spark.sql("CREATE BRANCH dev IN nessie AT main")
+    print("Dev branch created.")
+else:
+    print("Dev branch already exists.")
+
+# Step 3: Switch to dev branch
+spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
+
+
+
 # Step 2: Create namespace if needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
-
-#spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
 
 
 # ----------- WEATHER DATA ---------------
