@@ -135,7 +135,7 @@ def generate_cities_task():
 default_args = {'owner': 'airflow', 'retries': 1, 'retry_delay': timedelta(minutes=2)}
 
 with DAG(
-    dag_id='injest_all_structured_data_from_api_to_minio',
+    dag_id='ingest_all_structured_data_from_api_to_minio',
     default_args=default_args,
     description='Generate Weather, Countries, Cities Data and upload to MinIO',
     schedule_interval='@daily',
