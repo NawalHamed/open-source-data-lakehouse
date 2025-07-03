@@ -7,7 +7,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
     .config("spark.sql.catalog.nessie.ref", "main") \
-    .config("spark.sql.catalog.nessie.warehouse", "s3a://warehouse/") \
+    .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
     .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
@@ -16,7 +16,7 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Step 2: Read image metadata from MinIO bucket
-image_df = spark.read.format("image").load("s3a://warehouse/bronze_layer/unstructured_images_raw_data/")
+image_df = spark.read.format("image").load("s3a://lakehouse/bronze_layer/unstructured_images_raw_data/")
 
 # Optional: Show schema and metadata
 image_df.printSchema()
