@@ -20,7 +20,7 @@ MINIO_CLIENT = Minio(
     secure=False
 )
 
-BUCKET = "warehouse"
+BUCKET = "lakehouse"
 IMAGE_COUNT = 10  # Number of random images to generate per run
 RES = (800, 400)  # Image resolution
 # =======================================
@@ -64,7 +64,7 @@ def generate_and_upload_airline_images():
 # ============ Airflow DAG ============
 
 with DAG(
-    dag_id="injest_airline_table_images_unstructured_to_minio",
+    dag_id="ingest_airline_table_images_unstructured_to_minio",
     default_args=DEFAULT_ARGS,
     description="Fetch simulated airline table images and upload to MinIO without PIL/matplotlib",
     schedule_interval="@daily",
