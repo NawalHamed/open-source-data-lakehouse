@@ -175,7 +175,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id='injest_airline_data_semi_structured_to_minio',
+    dag_id='ingest_airline_data_semi_structured_to_minio',
     default_args=default_args,
     description='Generate Airline Data and Upload to MinIO',
     schedule_interval='@daily',
