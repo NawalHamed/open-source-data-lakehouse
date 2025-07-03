@@ -31,6 +31,8 @@ image_df.select(
 # Step 3: Create namespace/schema in Iceberg via Nessie if it doesn't exist
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata")
+
 # Step 4: Write image metadata as an Iceberg table using Nessie catalog
 #image_df.writeTo("nessie.silver_layer.image_metadata").append()
 image_df.writeTo("nessie.silver_layer.image_metadata").createOrReplace()
