@@ -178,7 +178,7 @@ default_args = {
 }
 
 with DAG(
-    dag_id='injest_weather_structured_data_from_api_to_minio',
+    dag_id='ingest_weather_structured_data_from_api_to_minio',
     default_args=default_args,
     description='Generate mock weather data and upload to MinIO',
     start_date=datetime(2024, 1, 1),
