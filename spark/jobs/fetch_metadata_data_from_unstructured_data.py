@@ -53,10 +53,12 @@ schema = StructType([
 
 final_df = spark.createDataFrame(results, schema=schema)
 
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_status")
 
 # Step 5: Write to Iceberg Table
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
+
+
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_status")
 
 final_df.writeTo("nessie.silver_layer.image_metadata_with_status").createOrReplace()
 
