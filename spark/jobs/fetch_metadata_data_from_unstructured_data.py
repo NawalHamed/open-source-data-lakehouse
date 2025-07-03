@@ -12,7 +12,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
     .config("spark.sql.catalog.nessie.ref", "main") \
-    .config("spark.sql.catalog.nessie.warehouse", "s3a://warehouse/") \
+    .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
     .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
@@ -22,7 +22,7 @@ spark = SparkSession.builder \
 
 # Step 2: Read images as binary
 image_df = spark.read.format("binaryFile") \
-    .load("s3a://warehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
+    .load("s3a://lakehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
     .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
 
 # Step 3: Collect and decode with Pillow
