@@ -178,7 +178,7 @@ def generate_flight_data():
 default_args = {'owner': 'airflow', 'retries': 1, 'retry_delay': timedelta(minutes=5)}
 
 with DAG(
-    dag_id='generate_master_and_flight_data',
+    dag_id='ingest_all_semi_structured_data_from_api_to_minio',
     default_args=default_args,
     schedule_interval='@daily',
     start_date=datetime(2024, 1, 1),
