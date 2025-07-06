@@ -20,11 +20,16 @@ MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_SECURE = False
 MINIO_BUCKET = 'lakehouse'
-timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
+#timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
 
-OBJECT_NAME_AIRLINE = f"bronze_layer/semi_structured_raw_data/airline_data/airlines_data_{timestamp}.{FILE_FORMAT}"
-OBJECT_NAME_AIRPORT = f"bronze_layer/semi_structured_raw_data/airport_data/airports_data_{timestamp}.{FILE_FORMAT}"
-OBJECT_NAME_FLIGHT = f"bronze_layer/semi_structured_raw_data/flight_data/flights_data_{timestamp}.{FILE_FORMAT}"
+
+now = datetime.utcnow()
+year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
+timestamp = now.strftime('%Y%m%dT%H%M%S')
+
+OBJECT_NAME_AIRLINE = f"lakehouse/bronze_layer/{year}/{month}/{day}/json/airlines_data/airlines_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_AIRLINE = f"lakehouse/bronze_layer/{year}/{month}/{day}/json/airport_data/airports_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_AIRLINE = f"lakehouse/bronze_layer/{year}/{month}/{day}/json/flight_data/flight_data_{timestamp}.{FILE_FORMAT}"
 
 PREDEFINED_AIRLINES = [
     {"name": "American Airlines", "iata": "AA", "icao": "AAL", "callsign": "AMERICAN"},
@@ -60,7 +65,7 @@ class AirlineGenerator:
         country = COUNTRIES[country_code]
         name = f"{country['name'].split()[0]} {random.choice(['Air', 'Airways', 'Airlines'])}"
         callsign = name.replace(" ", "").upper()[:8]
-        return {"id": str(1000000 + index), "name": name, "iata": iata, "icao": icao, "callsign": callsign, "country_code": country_code, "country": country['name'], "hub": random.choice(country['hubs']), "status": "active"}
+        return {"id": str(1000000 + index), "name": name, "iata": iata, "icao": icao, "callsign": callsign, "country_code": country_code, "country": country['name'], "hub": random.choice(country['hubs']), "status": "active", "created_at": timestamp, "updated_at": timestamp}
 
 class AirportGenerator:
     def __init__(self):
@@ -75,7 +80,7 @@ class AirportGenerator:
         country_code = random.choice(list(COUNTRIES.keys()))
         country = COUNTRIES[country_code]
         name = f"{country['name'].split()[0]} {random.choice(['International', 'Regional', 'Airport'])}"
-        return {"id": str(2000000 + index), "airport_id": str(index + 1), "iata_code": iata, "icao_code": icao, "country_iso2": country_code, "country_name": country['name'], "airport_name": name}
+        return {"id": str(2000000 + index), "airport_id": str(index + 1), "iata_code": iata, "icao_code": icao, "country_iso2": country_code, "country_name": country['name'], "airport_name": name ,  "created_at": timestamp,"updated_at": timestamp}
 
 class FlightGenerator:
     def __init__(self, airline_iatas, airport_iatas):
@@ -86,7 +91,7 @@ class FlightGenerator:
         airline = random.choice(self.airline_iatas)
         dep = random.choice(self.airport_iatas)
         arr = random.choice([a for a in self.airport_iatas if a != dep] or [dep])
-        return {"flight_id": f"FL-{random.randint(100000,999999)}", "flight_number": f"{airline}{random.randint(100,999999)}", "airline_iata": airline, "departure_airport_iata": dep, "arrival_airport_iata": arr, "aircraft_type": random.choice(AIRCRAFT_TYPES), "distance_km": round(random.uniform(500, 12000), 2), "status": random.choice(["scheduled", "departed", "landed", "delayed", "cancelled"])}
+        return {"flight_id": f"FL-{random.randint(100000,999999)}", "flight_number": f"{airline}{random.randint(100,999999)}", "airline_iata": airline, "departure_airport_iata": dep, "arrival_airport_iata": arr, "aircraft_type": random.choice(AIRCRAFT_TYPES), "distance_km": round(random.uniform(500, 12000), 2), "status": random.choice(["scheduled", "departed", "landed", "delayed", "cancelled"]),  "created_at": timestamp,"updated_at": timestamp}
 
 def load_existing_data(client, object_name):
     try:
