@@ -20,11 +20,15 @@ MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'lakehouse'
 FILE_FORMAT = 'csv'
 
-timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
+#timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
 
-OBJECT_NAME_WEATHER = f"bronze_layer/structured_raw_data/weather_data/weather_data_{timestamp}.{FILE_FORMAT}"
-OBJECT_NAME_COUNTRIES = f"bronze_layer/structured_raw_data/countries_data/countries_data_{timestamp}.{FILE_FORMAT}"
-OBJECT_NAME_CITIES = f"bronze_layer/structured_raw_data/cities_data/cities_data_{timestamp}.{FILE_FORMAT}"
+now = datetime.utcnow()
+year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
+timestamp = now.strftime('%Y%m%dT%H%M%S')
+
+OBJECT_NAME_WEATHER = f"bronze_layer/{year}/{month}/{day}/csv/weather_data/weather_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_COUNTRIES = f"bronze_layer/{year}/{month}/{day}/csv/countries_data/countries_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_CITIES = f"bronze_layer/{year}/{month}/{day}/csv/cities_data/cities_data_{timestamp}.{FILE_FORMAT}"
 # =======================================
 
 # ---------- Weather Data ----------
@@ -52,7 +56,8 @@ def generate_weather_record():
         "humidity": random.randint(20, 100),
         "wind_speed_kmh": random.randint(0, 100),
         "weather_desc": random.choice(WEATHER_CONDITIONS)["desc"],
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+         "created_at": timestamp, "updated_at": timestamp
     }
 
 # ---------- Countries Data ----------
@@ -68,7 +73,7 @@ def generate_country(index):
         c = PREDEFINED_COUNTRIES[index]
     else:
         name = f"Country{index}"
-        c = {"name": name, "iso2": name[:2].upper(), "capital": f"{name}City", "continent": random.choice(["AF", "EU", "AS", "NA"]), "population": random.randint(100000, 50000000)}
+        c = {"name": name, "iso2": name[:2].upper(), "capital": f"{name}City", "continent": random.choice(["AF", "EU", "AS", "NA"]), "population": random.randint(100000, 50000000), "created_at": timestamp, "updated_at": timestamp}
     c["id"] = str(1000000 + index)
     return c
 
@@ -90,7 +95,8 @@ class CityGenerator:
             "country_iso2": random.choice(COUNTRY_CODES),
             "latitude": round(random.uniform(-90, 90), 6),
             "longitude": round(random.uniform(-180, 180), 6),
-            "timezone": "UTC"
+            "timezone": "UTC",
+             "created_at": timestamp, "updated_at": timestamp
         }
 
 # ---------- Helpers ----------
