@@ -6,6 +6,10 @@ from io import BytesIO
 from minio import Minio
 import time
 
+now = datetime.utcnow()
+year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
+timestamp = now.strftime('%Y%m%dT%H%M%S')
+
 # ============ Configuration ============
 DEFAULT_ARGS = {
     'owner': 'airflow',
@@ -51,7 +55,7 @@ def generate_and_upload_airline_images():
 
         MINIO_CLIENT.put_object(
             BUCKET,
-            f"bronze_layer/unstructured_images_raw_data/{filename}",
+            f"bronze_layer/{year}/{month}/{day}/images/{filename}",
             image_data,
             length=image_data.getbuffer().nbytes,
             content_type="image/jpeg"
