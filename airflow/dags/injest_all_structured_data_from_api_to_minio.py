@@ -70,11 +70,19 @@ PREDEFINED_COUNTRIES = [
 
 def generate_country(index):
     if index < len(PREDEFINED_COUNTRIES):
-        c = PREDEFINED_COUNTRIES[index]
+        c = PREDEFINED_COUNTRIES[index].copy()  # Copy to avoid mutating the original
     else:
         name = f"Country{index}"
-        c = {"name": name, "iso2": name[:2].upper(), "capital": f"{name}City", "continent": random.choice(["AF", "EU", "AS", "NA"]), "population": random.randint(100000, 50000000), "created_at": timestamp, "updated_at": timestamp}
+        c = {
+            "name": name,
+            "iso2": name[:2].upper(),
+            "capital": f"{name}City",
+            "continent": random.choice(["AF", "EU", "AS", "NA"]),
+            "population": random.randint(100000, 50000000)
+        }
     c["id"] = str(1000000 + index)
+    c["created_at"] = timestamp
+    c["updated_at"] = timestamp
     return c
 
 # ---------- Cities Data ----------
