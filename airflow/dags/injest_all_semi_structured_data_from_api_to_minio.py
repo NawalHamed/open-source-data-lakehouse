@@ -27,9 +27,9 @@ now = datetime.utcnow()
 year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
 timestamp = now.strftime('%Y%m%dT%H%M%S')
 
-OBJECT_NAME_AIRLINE = f"lakehouse/bronze_layer/{year}/{month}/{day}/json/airlines_data/airlines_data_{timestamp}.{FILE_FORMAT}"
-OBJECT_NAME_AIRPORT = f"lakehouse/bronze_layer/{year}/{month}/{day}/json/airport_data/airports_data_{timestamp}.{FILE_FORMAT}"
-OBJECT_NAME_FLIGHT = f"lakehouse/bronze_layer/{year}/{month}/{day}/json/flight_data/flight_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_AIRLINE = f"bronze_layer/{year}/{month}/{day}/json/airlines_data/airlines_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_AIRPORT = f"bronze_layer/{year}/{month}/{day}/json/airport_data/airports_data_{timestamp}.{FILE_FORMAT}"
+OBJECT_NAME_FLIGHT = f"bronze_layer/{year}/{month}/{day}/json/flight_data/flight_data_{timestamp}.{FILE_FORMAT}"
 
 PREDEFINED_AIRLINES = [
     {"name": "American Airlines", "iata": "AA", "icao": "AAL", "callsign": "AMERICAN"},
