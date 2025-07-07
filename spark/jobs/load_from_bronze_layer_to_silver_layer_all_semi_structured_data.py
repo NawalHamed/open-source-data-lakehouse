@@ -99,7 +99,6 @@ try:
 except:
     df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
 
-spark.stop()
 
 
 # 🔟 Optional: Verify
@@ -111,4 +110,8 @@ spark.read.table("nessie.silver_layer.airport_data").show(5)
 
 print("✅ Flights Table Preview:")
 spark.read.table("nessie.silver_layer.flight_data").show(5)
+
+spark.stop()
+
+
 
