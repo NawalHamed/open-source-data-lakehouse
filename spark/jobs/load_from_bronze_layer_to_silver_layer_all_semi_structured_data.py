@@ -1,9 +1,10 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import trim, upper, initcap, col, to_timestamp
+from pyspark.sql.functions import trim, upper, initcap, col
+from datetime import datetime
 
-# Step 1: Spark Session with Iceberg + Nessie + MinIO
+# 1️⃣ Spark Session Setup
 spark = SparkSession.builder \
-    .appName("Bronze to Iceberg Silver - All Datasets") \
+    .appName("Bronze to Iceberg Silver - Full Reset") \
     .master("spark://spark-master:7077") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
@@ -17,77 +18,51 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# Step 2: Read JSON data from MinIO
-df_airline = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/semi_structured_raw_data/airline_data/*.json")
-df_airport = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/semi_structured_raw_data/airport_data/*.json")
-df_flight = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/semi_structured_raw_data/flight_data/*.json")
+# 2️⃣ Dynamic Date for Flight Bronze Layer
+now = datetime.utcnow()
+year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
+bronze_flight_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/json/flight_data/*.json"
 
-# Step 3: Cleaning and Transformation
+# 3️⃣ Drop Tables if Exist
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
 
-# Airline Dataset
+# 4️⃣ Load Data
+df_airline = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/master/airlines_data.json")
+df_airport = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/master/airports_data.json")
+df_flight = spark.read.option("multiline", "true").json(bronze_flight_path)
+
+# 5️⃣ Cleaning & Transformations
 df_airline_clean = df_airline \
-    .na.fill({"name": "UNKNOWN", "country": "UNKNOWN", "iata": "XXX"}) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("iata", upper(trim(col("iata")))) \
-    .dropDuplicates()
+    .dropDuplicates(["id"])
 
-# Airport Dataset
 df_airport_clean = df_airport \
-    .na.fill({"country_name": "UNKNOWN", "iata_code": "XXX"}) \
     .withColumn("country_name", upper(trim(col("country_name")))) \
     .withColumn("iata_code", upper(trim(col("iata_code")))) \
-    .dropDuplicates()
+    .dropDuplicates(["id"])
 
-# Flight Dataset
 df_flight_clean = df_flight \
-    .na.fill({"status": "UNKNOWN"}) \
     .withColumn("flight_number", upper(trim(col("flight_number")))) \
-    .dropDuplicates()
+    .dropDuplicates(["flight_id"])
 
-# Step 4: Create namespace if needed
+# 6️⃣ Create Namespace if Needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
+# 7️⃣ Re-Create Clean Tables
+df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
+df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
+df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
 
-# Step 5: Write to Iceberg Silver layer tables
-
-try:
-    #spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
-    #spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
-    #spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
-    
-    #print("table drops successfully.")
-
-    #df_airline_clean.writeTo("nessie.silver_layer.airline_data") \
-    #.option("location", "s3a://lakehouse/silver_layer/airline_data") \
-    #.createOrReplace()
-
-    #df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
-    #df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
-    #df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
-    df_airline_clean.writeTo("nessie.silver_layer.airline_data").append()
-    df_airport_clean.writeTo("nessie.silver_layer.airport_data").append()
-    df_flight_clean.writeTo("nessie.silver_layer.flight_data").append()
-
-
-    print("table written successfully.")
-except Exception as e:
-    print(f"table write failed: {e}")
-
-
-
-#df_airline_clean.writeTo("nessie.silver_layer.airline_data").append()
-#df_airport_clean.writeTo("nessie.silver_layer.airport_data").append()
-#df_flight_clean.writeTo("nessie.silver_layer.flight_data").append()
-
-
-
-# Step 6: Verify Silver Tables
-print("=== Verify Airline Silver ===")
+# 8️⃣ Verify Results
+print("✅ Airlines Recreated:")
 spark.read.table("nessie.silver_layer.airline_data").show(5)
 
-print("=== Verify Airport Silver ===")
+print("✅ Airports Recreated:")
 spark.read.table("nessie.silver_layer.airport_data").show(5)
 
-print("=== Verify Flight Silver ===")
+print("✅ Flights Recreated:")
 spark.read.table("nessie.silver_layer.flight_data").show(5)
