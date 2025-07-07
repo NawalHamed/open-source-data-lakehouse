@@ -4,7 +4,7 @@ from datetime import datetime
 
 # 1️⃣ Spark Session Setup
 spark = SparkSession.builder \
-    .appName("Bronze to Iceberg Silver - Full Reset") \
+    .appName("Bronze to Silver Lakehouse with Detection Logic") \
     .master("spark://spark-master:7077") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
@@ -18,22 +18,17 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# 2️⃣ Dynamic Date for Flight Bronze Layer
+# 2️⃣ Date Detection for Daily Flight Partition
 now = datetime.utcnow()
 year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
 bronze_flight_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/json/flight_data/*.json"
 
-# 3️⃣ Drop Tables if Exist
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
-
-# 4️⃣ Load Data
+# 3️⃣ Load Data
 df_airline = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/master/airlines_data.json")
 df_airport = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/master/airports_data.json")
 df_flight = spark.read.option("multiline", "true").json(bronze_flight_path)
 
-# 5️⃣ Cleaning & Transformations
+# 4️⃣ Cleaning & Transformations
 df_airline_clean = df_airline \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
@@ -49,20 +44,56 @@ df_flight_clean = df_flight \
     .withColumn("flight_number", upper(trim(col("flight_number")))) \
     .dropDuplicates(["flight_id"])
 
-# 6️⃣ Create Namespace if Needed
+# 5️⃣ Create Namespace if Needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-# 7️⃣ Re-Create Clean Tables
-df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
-df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
-df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
+# 6️⃣ Detect if Tables Exist
+table_list = [row.tableName for row in spark.sql("SHOW TABLES IN nessie.silver_layer").collect()]
 
-# 8️⃣ Verify Results
-print("✅ Airlines Recreated:")
+# 7️⃣ Airlines Logic
+if "airline_data" in table_list:
+    print("✅ Airline table exists - MERGE INTO")
+    df_airline_clean.createOrReplaceTempView("airline_updates")
+    spark.sql("""
+    MERGE INTO nessie.silver_layer.airline_data AS target
+    USING airline_updates AS source
+    ON target.id = source.id
+    WHEN MATCHED THEN UPDATE SET *
+    WHEN NOT MATCHED THEN INSERT *
+    """)
+else:
+    print("🆕 Airline table does not exist - creating new table")
+    df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
+
+# 8️⃣ Airports Logic
+if "airport_data" in table_list:
+    print("✅ Airport table exists - MERGE INTO")
+    df_airport_clean.createOrReplaceTempView("airport_updates")
+    spark.sql("""
+    MERGE INTO nessie.silver_layer.airport_data AS target
+    USING airport_updates AS source
+    ON target.id = source.id
+    WHEN MATCHED THEN UPDATE SET *
+    WHEN NOT MATCHED THEN INSERT *
+    """)
+else:
+    print("🆕 Airport table does not exist - creating new table")
+    df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
+
+# 9️⃣ Flights Logic (Always Append)
+if "flight_data" in table_list:
+    print("✈ Appending new flight records")
+    df_flight_clean.writeTo("nessie.silver_layer.flight_data").append()
+else:
+    print("🆕 Flight table does not exist - creating new table")
+    df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
+
+# 🔟 Optional: Verify
+print("✅ Airlines Table Preview:")
 spark.read.table("nessie.silver_layer.airline_data").show(5)
 
-print("✅ Airports Recreated:")
+print("✅ Airports Table Preview:")
 spark.read.table("nessie.silver_layer.airport_data").show(5)
 
-print("✅ Flights Recreated:")
+print("✅ Flights Table Preview:")
 spark.read.table("nessie.silver_layer.flight_data").show(5)
