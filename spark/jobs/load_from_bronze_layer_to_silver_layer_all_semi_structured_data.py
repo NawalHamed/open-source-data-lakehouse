@@ -1,10 +1,10 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col
-from datetime import datetime
+from pyspark.sql.utils import AnalysisException
 
-# 1️⃣ Spark Session Setup
+# Step 1: Spark Session Setup with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
-    .appName("Bronze to Silver Lakehouse with Detection Logic") \
+    .appName("Bronze to Iceberg Silver - All Datasets") \
     .master("spark://spark-master:7077") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
@@ -18,82 +18,93 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# 2️⃣ Date Detection for Daily Flight Partition
-now = datetime.utcnow()
-year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
-bronze_flight_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/json/flight_data/*.json"
+# Step 2: Read JSON data dynamically (latest path)
+year = spark.sql("SELECT year(current_date())").collect()[0][0]
+month = f"{spark.sql('SELECT month(current_date())').collect()[0][0]:02d}"
+day = f"{spark.sql('SELECT day(current_date())').collect()[0][0]:02d}"
 
-# 3️⃣ Load Data
-df_airline = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/master/airlines_data.json")
-df_airport = spark.read.option("multiline", "true").json("s3a://lakehouse/bronze_layer/master/airports_data.json")
-df_flight = spark.read.option("multiline", "true").json(bronze_flight_path)
+bronze_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/json"
 
-# 4️⃣ Cleaning & Transformations
-df_airline_clean = df_airline \
+df_airline = spark.read.option("multiline", "true").json(f"{bronze_path}/airlines_data/*.json")
+df_airport = spark.read.option("multiline", "true").json(f"{bronze_path}/airport_data/*.json")
+df_flight = spark.read.option("multiline", "true").json(f"{bronze_path}/flight_data/*.json")
+
+# Step 3: Cleaning and Transformation
+df_airline_clean = df_airline.na.fill({"name": "UNKNOWN", "country": "UNKNOWN", "iata": "XXX"}) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
     .withColumn("iata", upper(trim(col("iata")))) \
-    .dropDuplicates(["id"])
+    .dropDuplicates()
 
-df_airport_clean = df_airport \
+df_airport_clean = df_airport.na.fill({"country_name": "UNKNOWN", "iata_code": "XXX"}) \
     .withColumn("country_name", upper(trim(col("country_name")))) \
     .withColumn("iata_code", upper(trim(col("iata_code")))) \
-    .dropDuplicates(["id"])
+    .dropDuplicates()
 
-df_flight_clean = df_flight \
+df_flight_clean = df_flight.na.fill({"status": "UNKNOWN"}) \
     .withColumn("flight_number", upper(trim(col("flight_number")))) \
-    .dropDuplicates(["flight_id"])
+    .dropDuplicates()
 
-# 5️⃣ Create Namespace if Needed
+# Step 4: Create namespace if needed
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-# 6️⃣ Detect if Tables Exist
-table_list = [row.tableName for row in spark.sql("SHOW TABLES IN nessie.silver_layer").collect()]
+# Step 5: Airlines Merge or Initial Load
+try:
+    df_existing = spark.read.table("nessie.silver_layer.airline_data")
+    print("✅ Airline table exists - Merging DataFrame")
 
-# 7️⃣ Airlines Logic
-if "airline_data" in table_list:
-    print("✅ Airline table exists - MERGE INTO")
-    df_airline_clean.createOrReplaceTempView("airline_updates")
-    spark.sql("""
-    MERGE INTO nessie.silver_layer.airline_data AS target
-    USING airline_updates AS source
-    ON target.id = source.id
-    WHEN MATCHED THEN UPDATE SET *
-    WHEN NOT MATCHED THEN INSERT *
-    """)
-else:
-    print("🆕 Airline table does not exist - creating new table")
+    df_merged = df_existing.alias("old").join(
+        df_airline_clean.alias("new"), on="id", how="outer"
+    ).selectExpr(
+        "coalesce(new.id, old.id) as id",
+        "coalesce(new.name, old.name) as name",
+        "coalesce(new.iata, old.iata) as iata",
+        "coalesce(new.icao, old.icao) as icao",
+        "coalesce(new.callsign, old.callsign) as callsign",
+        "coalesce(new.country_code, old.country_code) as country_code",
+        "coalesce(new.country, old.country) as country",
+        "coalesce(new.hub, old.hub) as hub",
+        "coalesce(new.status, old.status) as status",
+        "coalesce(new.created_at, old.created_at) as created_at",
+        "coalesce(new.updated_at, old.updated_at) as updated_at"
+    )
+    df_merged.writeTo("nessie.silver_layer.airline_data").overwritePartitions()
+except AnalysisException:
+    print("✅ Airline table does not exist - Creating new")
     df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
 
-# 8️⃣ Airports Logic
-if "airport_data" in table_list:
-    print("✅ Airport table exists - MERGE INTO")
-    df_airport_clean.createOrReplaceTempView("airport_updates")
-    spark.sql("""
-    MERGE INTO nessie.silver_layer.airport_data AS target
-    USING airport_updates AS source
-    ON target.id = source.id
-    WHEN MATCHED THEN UPDATE SET *
-    WHEN NOT MATCHED THEN INSERT *
-    """)
-else:
-    print("🆕 Airport table does not exist - creating new table")
+# Step 6: Airports Merge or Initial Load
+try:
+    df_existing_airport = spark.read.table("nessie.silver_layer.airport_data")
+    print("✅ Airport table exists - Merging DataFrame")
+
+    df_merged_airport = df_existing_airport.alias("old").join(
+        df_airport_clean.alias("new"), on="id", how="outer"
+    ).selectExpr(
+        "coalesce(new.id, old.id) as id",
+        "coalesce(new.airport_id, old.airport_id) as airport_id",
+        "coalesce(new.iata_code, old.iata_code) as iata_code",
+        "coalesce(new.icao_code, old.icao_code) as icao_code",
+        "coalesce(new.country_iso2, old.country_iso2) as country_iso2",
+        "coalesce(new.country_name, old.country_name) as country_name",
+        "coalesce(new.airport_name, old.airport_name) as airport_name",
+        "coalesce(new.created_at, old.created_at) as created_at",
+        "coalesce(new.updated_at, old.updated_at) as updated_at"
+    )
+    df_merged_airport.writeTo("nessie.silver_layer.airport_data").overwritePartitions()
+except AnalysisException:
+    print("✅ Airport table does not exist - Creating new")
     df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
 
-# 9️⃣ Flights Logic (Always Append)
-if "flight_data" in table_list:
-    print("✈ Appending new flight records")
-    df_flight_clean.writeTo("nessie.silver_layer.flight_data").append()
-else:
-    print("🆕 Flight table does not exist - creating new table")
-    df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
+# Step 7: Flights Append (Daily)
+df_flight_clean.writeTo("nessie.silver_layer.flight_data").append()
 
-# 🔟 Optional: Verify
-print("✅ Airlines Table Preview:")
+# Step 8: Verification
+print("=== Airlines Preview ===")
 spark.read.table("nessie.silver_layer.airline_data").show(5)
-
-print("✅ Airports Table Preview:")
+print("=== Airports Preview ===")
 spark.read.table("nessie.silver_layer.airport_data").show(5)
-
-print("✅ Flights Table Preview:")
+print("=== Flights Preview ===")
 spark.read.table("nessie.silver_layer.flight_data").show(5)
+
+print("✅ Bronze to Silver Process Completed")
