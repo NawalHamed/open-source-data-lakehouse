@@ -28,9 +28,6 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 
-spark.sql("DROP TABLE IF EXISTS nessie.gold_layer.airport_capacity_analysis")
-spark.sql("DROP TABLE IF EXISTS nessie.gold_layer.flight_performance_summary")
-
 # 4️⃣ Load Bronze Data
 df_country = spark.read.option("header", True).csv(bronze_country_path)
 df_city = spark.read.option("header", True).csv(bronze_city_path)
