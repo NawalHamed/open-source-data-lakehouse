@@ -27,6 +27,9 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
+spark.catalog.dropTable("nessie.gold_layer.airport_capacity_analysis", purge=True)
+spark.catalog.dropTable("nessie.gold_layer.flight_performance_summary", purge=True)
+
 
 # 4️⃣ Load Bronze Data
 df_country = spark.read.option("header", True).csv(bronze_country_path)
