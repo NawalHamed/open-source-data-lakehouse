@@ -16,6 +16,7 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
       VIRTUAL_HOST: minio.rihal.dev
       VIRTUAL_PORT: 9001
+      MINIO_STORAGE_MINFREE: 1Gi
     volumes:
       - minio_data:/data
     networks:
