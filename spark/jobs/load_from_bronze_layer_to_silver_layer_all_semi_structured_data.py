@@ -27,6 +27,11 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
+
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
+
 # 4️⃣ Load Bronze Data
 df_airline = spark.read.option("multiline", "true").json(bronze_airline_path)
 df_airport = spark.read.option("multiline", "true").json(bronze_airport_path)
@@ -51,9 +56,7 @@ df_flight_clean = df_flight.na.fill({"status": "UNKNOWN"}) \
 # 6️⃣ Ensure Namespace
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
+
 
 # 7️⃣ Airline MERGE using DataFrame join logic
 try:
