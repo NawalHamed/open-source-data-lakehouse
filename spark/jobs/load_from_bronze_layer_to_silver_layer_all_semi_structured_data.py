@@ -51,6 +51,10 @@ df_flight_clean = df_flight.na.fill({"status": "UNKNOWN"}) \
 # 6️⃣ Ensure Namespace
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
+
 # 7️⃣ Airline MERGE using DataFrame join logic
 try:
     df_existing_airline = spark.read.format("iceberg").load("nessie.silver_layer.airline_data")
