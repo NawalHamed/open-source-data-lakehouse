@@ -28,9 +28,9 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airline_data")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.airport_data")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
 
 # 4️⃣ Load Bronze Data
 df_airline = spark.read.option("multiline", "true").json(bronze_airline_path)
