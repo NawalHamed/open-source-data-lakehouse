@@ -1,9 +1,19 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import trim, upper, initcap, col
+from pyspark.sql.functions import trim, upper, initcap, col, coalesce
+from datetime import datetime
 
-# Step 1: Spark Session with Iceberg + Nessie + MinIO
+# 1️⃣ Dynamic Date Detection for Weather Data
+now = datetime.utcnow()
+year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
+bronze_weather_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/csv/weather_data/*.csv"
+
+# 2️⃣ Paths for Master Data
+bronze_country_path = "s3a://lakehouse/bronze_layer/master/countries_data.csv"
+bronze_city_path = "s3a://lakehouse/bronze_layer/master/cities_data.csv"
+
+# 3️⃣ Initialize Spark
 spark = SparkSession.builder \
-    .appName("All Structured Data to Iceberg Silver with Cleaning") \
+    .appName("Structured Data Bronze to Silver Incremental Load") \
     .master("spark://spark-master:7077") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
@@ -17,93 +27,103 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
+# 4️⃣ Load Bronze Data
+df_country = spark.read.option("header", True).csv(bronze_country_path)
+df_city = spark.read.option("header", True).csv(bronze_city_path)
+df_weather = spark.read.option("header", True).csv(bronze_weather_path)
 
-#try:
-#    spark.sql("CREATE BRANCH dev IN nessie AT main")
-#    print("Dev branch created.")
-#except Exception as e:
-#    print(f"Branch likely already exists or error: {e}")
-
-# Step 3: Switch to dev branch
-#spark.conf.set("spark.sql.catalog.nessie.ref", "dev")
-
-
-
-# Step 2: Create namespace if needed
-spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
-
-
-# ----------- WEATHER DATA ---------------
-print("Loading Weather Data...")
-weather_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/weather_data/*.csv")
-
-
-#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.weather_data")
-#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.countries_data")
-#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.cities_data")
-
-
-# Cleaning
-weather_df_clean = weather_df \
-    .na.fill({"weather_desc": "UNKNOWN", "city": "UNKNOWN"}) \
-    .withColumn("weather_desc", upper(trim(col("weather_desc")))) \
-    .withColumn("city", initcap(trim(col("city")))) \
-    .dropDuplicates()
-
-weather_df_clean.printSchema()
-weather_df_clean.show(5)
-
-print("Writing Weather Data to Iceberg...")
-#weather_df_clean.writeTo("nessie.silver_layer.weather_data").createOrReplace()
-weather_df_clean.writeTo("nessie.silver_layer.weather_data").append()
-
-
-# ----------- COUNTRIES DATA ---------------
-print("Loading Countries Data...")
-countries_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/countries_data/*.csv")
-
-# Cleaning
-countries_df_clean = countries_df \
-    .na.fill({"name": "UNKNOWN", "iso2": "XXX"}) \
+# 5️⃣ Clean and Transform
+df_country_clean = df_country.na.fill({
+        "name": "UNKNOWN",
+        "iso2": "XX",
+        "capital": "UNKNOWN",
+        "continent": "UNKNOWN"
+    }) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("iso2", upper(trim(col("iso2")))) \
+    .withColumn("capital", initcap(trim(col("capital")))) \
+    .withColumn("continent", upper(trim(col("continent")))) \
     .dropDuplicates()
 
-countries_df_clean.printSchema()
-countries_df_clean.show(5)
-
-print("Writing Countries Data to Iceberg...")
-#countries_df_clean.writeTo("nessie.silver_layer.countries_data").createOrReplace()
-countries_df_clean.writeTo("nessie.silver_layer.countries_data").append()
-
-
-# ----------- CITIES DATA ---------------
-print("Loading Cities Data...")
-cities_df = spark.read.option("header", True).option("inferSchema", True).csv("s3a://lakehouse/bronze_layer/structured_raw_data/cities_data/*.csv")
-
-# Cleaning
-cities_df_clean = cities_df \
-    .na.fill({"city_name": "UNKNOWN", "country_iso2": "UNKNOWN"}) \
+df_city_clean = df_city.na.fill({
+        "city_name": "UNKNOWN",
+        "country_iso2": "XX",
+        "iata_code": "XXX",
+        "timezone": "UTC"
+    }) \
     .withColumn("city_name", initcap(trim(col("city_name")))) \
+    .withColumn("country_iso2", upper(trim(col("country_iso2")))) \
+    .withColumn("iata_code", upper(trim(col("iata_code")))) \
     .dropDuplicates()
 
-cities_df_clean.printSchema()
-cities_df_clean.show(5)
+df_weather_clean = df_weather.na.fill({
+        "city": "UNKNOWN",
+        "country": "UNKNOWN",
+        "region": "UNKNOWN",
+        "weather_desc": "UNKNOWN"
+    }) \
+    .withColumn("city", initcap(trim(col("city")))) \
+    .withColumn("country", upper(trim(col("country")))) \
+    .withColumn("region", initcap(trim(col("region")))) \
+    .withColumn("weather_desc", upper(trim(col("weather_desc")))) \
+    .dropDuplicates()
 
-print("Writing Cities Data to Iceberg...")
-#cities_df_clean.writeTo("nessie.silver_layer.cities_data").createOrReplace()
-cities_df_clean.writeTo("nessie.silver_layer.cities_data").append()
+# 6️⃣ Ensure Namespace
+spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-# Step 4: Verify
-print("\nSample from Silver Layer Tables:")
+# 7️⃣ Country MERGE using DataFrame join logic
+try:
+    df_existing_country = spark.read.format("iceberg").load("nessie.silver_layer.countries_data")
+    df_merged_country = df_existing_country.alias("target").join(
+        df_country_clean.alias("source"), "id", "outer"
+    ).select(
+        coalesce(col("source.id"), col("target.id")).alias("id"),
+        coalesce(col("source.name"), col("target.name")).alias("name"),
+        coalesce(col("source.iso2"), col("target.iso2")).alias("iso2"),
+        coalesce(col("source.capital"), col("target.capital")).alias("capital"),
+        coalesce(col("source.continent"), col("target.continent")).alias("continent"),
+        coalesce(col("source.population"), col("target.population")).alias("population"),
+        coalesce(col("source.created_at"), col("target.created_at")).alias("created_at"),
+        coalesce(col("source.updated_at"), col("target.updated_at")).alias("updated_at")
+    )
+    df_merged_country.writeTo("nessie.silver_layer.countries_data").overwritePartitions()
+except:
+    df_country_clean.writeTo("nessie.silver_layer.countries_data").createOrReplace()
 
-print("\nWeather Data:")
-spark.read.table("nessie.silver_layer.weather_data").show(5)
+# 8️⃣ City MERGE using DataFrame join logic
+try:
+    df_existing_city = spark.read.format("iceberg").load("nessie.silver_layer.cities_data")
+    df_merged_city = df_existing_city.alias("target").join(
+        df_city_clean.alias("source"), "id", "outer"
+    ).select(
+        coalesce(col("source.id"), col("target.id")).alias("id"),
+        coalesce(col("source.iata_code"), col("target.iata_code")).alias("iata_code"),
+        coalesce(col("source.city_name"), col("target.city_name")).alias("city_name"),
+        coalesce(col("source.country_iso2"), col("target.country_iso2")).alias("country_iso2"),
+        coalesce(col("source.latitude"), col("target.latitude")).alias("latitude"),
+        coalesce(col("source.longitude"), col("target.longitude")).alias("longitude"),
+        coalesce(col("source.timezone"), col("target.timezone")).alias("timezone"),
+        coalesce(col("source.created_at"), col("target.created_at")).alias("created_at"),
+        coalesce(col("source.updated_at"), col("target.updated_at")).alias("updated_at")
+    )
+    df_merged_city.writeTo("nessie.silver_layer.cities_data").overwritePartitions()
+except:
+    df_city_clean.writeTo("nessie.silver_layer.cities_data").createOrReplace()
 
-print("\nCountries Data:")
+# 9️⃣ Weather Data - Append Only (Daily)
+try:
+    df_weather_clean.writeTo("nessie.silver_layer.weather_data").append()
+except:
+    df_weather_clean.writeTo("nessie.silver_layer.weather_data").createOrReplace()
+
+# 🔟 Optional: Verify
+print("✅ Countries Table Preview:")
 spark.read.table("nessie.silver_layer.countries_data").show(5)
 
-print("\nCities Data:")
+print("✅ Cities Table Preview:")
 spark.read.table("nessie.silver_layer.cities_data").show(5)
 
-print("All structured datasets cleaned and written to Iceberg Silver Layer!")
+print("✅ Weather Table Preview:")
+spark.read.table("nessie.silver_layer.weather_data").show(5)
+
+spark.stop()
