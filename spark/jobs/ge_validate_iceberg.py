@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from great_expectations.core.batch import RuntimeBatchRequest
-from great_expectations import get_context  # Changed import
+from great_expectations import get_context
 
 def validate_iceberg_data():
     # Initialize Spark with Iceberg configuration
@@ -24,7 +24,15 @@ def validate_iceberg_data():
         df = spark.table("nessie.silver_layer.flight_data")
 
         # Initialize Great Expectations context
-        context = get_context()  # Using get_context instead of DataContext
+        context = get_context()
+
+        # Create or get expectation suite
+        suite_name = "flight_data_expectations"
+        try:
+            suite = context.get_expectation_suite(suite_name)
+        except:
+            # Create new suite if it doesn't exist
+            suite = context.create_expectation_suite(suite_name)
 
         # Create batch request
         batch_request = RuntimeBatchRequest(
@@ -35,11 +43,10 @@ def validate_iceberg_data():
             batch_identifiers={"run_id": "flight_validation_1"}
         )
 
-        # Create validator
+        # Create validator with the suite
         validator = context.get_validator(
             batch_request=batch_request,
-            expectation_suite_name="flight_data_expectations",
-            create_expectation_suite_with_name_if_missing=True
+            expectation_suite=suite  # Use the suite object directly
         )
 
         # Define expectations
@@ -48,6 +55,9 @@ def validate_iceberg_data():
             "status", 
             ["scheduled", "departed", "landed", "delayed", "cancelled"]
         )
+
+        # Save the expectation suite
+        validator.save_expectation_suite()
 
         # Run validation
         results = validator.validate()
