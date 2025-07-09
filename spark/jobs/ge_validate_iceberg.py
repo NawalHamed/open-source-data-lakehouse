@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.validator.validator import Validator
-from great_expectations.data_context import BaseDataContext
+from great_expectations import get_context
 
 # ================= Spark Setup =================
 spark = SparkSession.builder \
