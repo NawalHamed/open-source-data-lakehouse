@@ -1,49 +1,61 @@
 from pyspark.sql import SparkSession
 from great_expectations.core.batch import RuntimeBatchRequest
-from great_expectations.validator.validator import Validator
-from great_expectations import get_context
+from great_expectations.data_context import DataContext
 
-# ================= Spark Setup =================
-spark = SparkSession.builder \
-    .appName("GE Iceberg Validation") \
-    .master("spark://spark-master:7077") \
-    .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
-    .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
-    .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
-    .config("spark.sql.catalog.nessie.ref", "main") \
-    .config("spark.sql.catalog.nessie.warehouse", "s3a://warehouse/") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
-    .getOrCreate()
-    
-# Step 2: Load Iceberg data
-df = spark.read.format("iceberg").load("nessie.silver_layer.flight_data")
+def validate_iceberg_data():
+    # Initialize Spark with Iceberg configuration
+    spark = SparkSession.builder \
+        .appName("GE Iceberg Validation") \
+        .master("spark://spark-master:7077") \
+        .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
+        .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
+        .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
+        .config("spark.sql.catalog.nessie.ref", "main") \
+        .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
+        .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+        .getOrCreate()
 
-# Step 3: Initialize context
-context = get_context()  # ✅ auto-detects ./great_expectations/
+    # Load Iceberg table
+    df = spark.table("nessie.silver_layer.flight_data")
 
-# Step 4: Create Runtime Batch Request
-batch_request = RuntimeBatchRequest(
-    datasource_name="my_spark_datasource",
-    data_connector_name="default_runtime_data_connector_name",
-    data_asset_name="flight_data",
-    runtime_parameters={"batch_data": df},
-    batch_identifiers={"default_identifier_name": "iceberg_batch"}
-)
+    # Initialize Great Expectations context
+    context = DataContext()
 
-# Step 5: Get validator and apply expectations
-validator = context.get_validator(
-    batch_request=batch_request,
-    expectation_suite_name="tmp_suite",  # Temporary suite (not saved)
-    create_expectation_suite_with_name_if_missing=True
-)
+    # Create batch request
+    batch_request = RuntimeBatchRequest(
+        datasource_name="default_spark_datasource",
+        data_connector_name="default_runtime_data_connector_name",
+        data_asset_name="flight_data_asset",
+        runtime_parameters={"batch_data": df},
+        batch_identifiers={"run_id": "flight_validation_1"}
+    )
 
-validator.expect_column_values_to_not_be_null("flight_id")
-validator.expect_column_values_to_be_in_set("status", ["on-time", "delayed", "cancelled"])
+    # Create validator
+    validator = context.get_validator(
+        batch_request=batch_request,
+        expectation_suite_name="flight_data_expectations",
+        create_expectation_suite_with_name_if_missing=True
+    )
 
-# Step 6: Validate and print results
-results = validator.validate()
-print(results)
+    # Define expectations
+    validator.expect_column_values_to_not_be_null("flight_id")
+    validator.expect_column_values_to_be_in_set(
+        "status", 
+        ["scheduled", "departed", "landed", "delayed", "cancelled"]
+    )
+
+    # Run validation
+    results = validator.validate()
+
+    # Stop Spark session
+    spark.stop()
+
+    return results
+
+if __name__ == "__main__":
+    validation_results = validate_iceberg_data()
+    print(validation_results)
