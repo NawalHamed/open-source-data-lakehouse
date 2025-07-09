@@ -5,7 +5,7 @@ USER root
 RUN apt-get update && \
     apt-get install -y python3-pip curl && \
     pip3 install --upgrade pip && \
-    pip3 install notebook jupyter pyspark pandas matplotlib
+    pip3 install notebook jupyter pyspark pandas matplotlib great-expectations
 
 # Hadoop AWS JAR
 RUN mkdir -p /opt/bitnami/spark/jars && \
