@@ -89,6 +89,7 @@ services:
     working_dir: /home/spark/notebooks
     command: >
       bash -c "
+        pip install great_expectations[pyspark] &&
         /opt/bitnami/spark/sbin/start-master.sh &
         jupyter notebook --ip=0.0.0.0 --port=8888 --allow-root --NotebookApp.token='' --NotebookApp.password=''
       "
@@ -233,44 +234,6 @@ services:
       - cloudbeaver-config:/opt/cloudbeaver/workspace
     networks:
       - shared-network
-  
-  
-  openmetadata:
-    image: openmetadata/server:latest
-    container_name: openmetadata
-    ports:
-      - "8588:8585"
-    environment:
-      # Metadata DB
-      OPENMETADATA_DATABASE_TYPE: postgres
-      OPENMETADATA_DATABASE_HOST: postgres_v
-      OPENMETADATA_DATABASE_PORT: 5432
-      OPENMETADATA_DATABASE_USER: airflow
-      OPENMETADATA_DATABASE_PASSWORD: airflow
-      OPENMETADATA_DATABASE_NAME: airflow
-      OPENMETADATA_DATABASE_DRIVER_CLASS: org.postgresql.Driver
-      OPENMETADATA_DATABASE_URL: jdbc:postgresql://postgres_v:5432/airflow
-      OPENMETADATA_DATABASE_SCHEMA: public
-
-      # Workflow Engine DB (Flowable)
-      OPENMETADATA_WORKFLOW_DATABASE_TYPE: postgres
-      OPENMETADATA_WORKFLOW_DATABASE_HOST: postgres_v
-      OPENMETADATA_WORKFLOW_DATABASE_PORT: 5432
-      OPENMETADATA_WORKFLOW_DATABASE_USER: airflow
-      OPENMETADATA_WORKFLOW_DATABASE_PASSWORD: airflow
-      OPENMETADATA_WORKFLOW_DATABASE_NAME: airflow
-      OPENMETADATA_WORKFLOW_DATABASE_DRIVER_CLASS: org.postgresql.Driver
-      OPENMETADATA_WORKFLOW_DATABASE_URL: jdbc:postgresql://postgres_v:5432/airflow
-
-      AUTHORIZER_CLASS_NAME: org.openmetadata.service.security.DefaultAuthorizer
-      AUTHORIZER_ENABLE_SECURE_SOCKET: "false"
-      VIRTUAL_HOST: openmetadata.rihal.dev
-      VIRTUAL_PORT: 8585
-    depends_on:
-      - postgres
-    networks:
-      - shared-network
-    restart: always
   
     
 
