@@ -1,0 +1,11 @@
+# great_expectations/great_expectations.yml
+
+datasources:
+  my_spark_datasource:
+    execution_engine:
+      class_name: SparkDFExecutionEngine
+    data_connectors:
+      default_runtime_data_connector_name:
+        class_name: RuntimeDataConnector
+        batch_identifiers:
+          - default_identifier_name
