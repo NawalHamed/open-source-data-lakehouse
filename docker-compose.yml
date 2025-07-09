@@ -241,13 +241,15 @@ services:
     ports:
       - "8588:8585"
     environment:
-      SERVER_HOST: http://openmetadata:8585
       OPENMETADATA_DATABASE_HOST: postgres_v
       OPENMETADATA_DATABASE_PORT: 5432
       OPENMETADATA_DATABASE_USER: airflow
       OPENMETADATA_DATABASE_PASSWORD: airflow
       OPENMETADATA_DATABASE_NAME: airflow
-      AUTHORIZER_CLASS_NAME: "org.openmetadata.service.security.DefaultAuthorizer"
+      OPENMETADATA_DATABASE_DRIVER_CLASS: org.postgresql.Driver
+      OPENMETADATA_DATABASE_URL: jdbc:postgresql://postgres_v:5432/airflow
+      OPENMETADATA_DATABASE_SCHEMA: public
+      AUTHORIZER_CLASS_NAME: org.openmetadata.service.security.DefaultAuthorizer
       AUTHORIZER_ENABLE_SECURE_SOCKET: "false"
       VIRTUAL_HOST: openmetadata.rihal.dev
       VIRTUAL_PORT: 8585
