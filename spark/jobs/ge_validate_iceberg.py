@@ -26,14 +26,6 @@ def validate_iceberg_data():
         # Initialize Great Expectations context
         context = get_context()
 
-        # Create or get expectation suite
-        suite_name = "flight_data_expectations"
-        try:
-            suite = context.get_expectation_suite(suite_name)
-        except:
-            # Create new suite if it doesn't exist
-            suite = context.create_expectation_suite(suite_name)
-
         # Create batch request
         batch_request = RuntimeBatchRequest(
             datasource_name="spark_datasource",
@@ -43,10 +35,11 @@ def validate_iceberg_data():
             batch_identifiers={"run_id": "flight_validation_1"}
         )
 
-        # Create validator with the suite
+        # Create validator - let it create suite automatically
         validator = context.get_validator(
             batch_request=batch_request,
-            expectation_suite=suite  # Use the suite object directly
+            expectation_suite_name="flight_data_expectations",
+            create_expectation_suite_with_name_if_missing=True
         )
 
         # Define expectations
@@ -56,8 +49,11 @@ def validate_iceberg_data():
             ["scheduled", "departed", "landed", "delayed", "cancelled"]
         )
 
-        # Save the expectation suite
-        validator.save_expectation_suite()
+        # Save the expectation suite (if using persistent context)
+        try:
+            validator.save_expectation_suite()
+        except AttributeError:
+            pass  # Skip for ephemeral context
 
         # Run validation
         results = validator.validate()
