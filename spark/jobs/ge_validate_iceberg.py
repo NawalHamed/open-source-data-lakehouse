@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from great_expectations.core.batch import RuntimeBatchRequest
-from great_expectations.data_context import DataContext
+from great_expectations import get_context  # Changed import
 
 def validate_iceberg_data():
     # Initialize Spark with Iceberg configuration
@@ -19,42 +19,47 @@ def validate_iceberg_data():
         .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
         .getOrCreate()
 
-    # Load Iceberg table
-    df = spark.table("nessie.silver_layer.flight_data")
+    try:
+        # Load Iceberg table
+        df = spark.table("nessie.silver_layer.flight_data")
 
-    # Initialize Great Expectations context
-    context = DataContext()
+        # Initialize Great Expectations context
+        context = get_context()  # Using get_context instead of DataContext
 
-    # Create batch request
-    batch_request = RuntimeBatchRequest(
-        datasource_name="default_spark_datasource",
-        data_connector_name="default_runtime_data_connector_name",
-        data_asset_name="flight_data_asset",
-        runtime_parameters={"batch_data": df},
-        batch_identifiers={"run_id": "flight_validation_1"}
-    )
+        # Create batch request
+        batch_request = RuntimeBatchRequest(
+            datasource_name="spark_datasource",
+            data_connector_name="default_runtime_data_connector_name",
+            data_asset_name="flight_data_asset",
+            runtime_parameters={"batch_data": df},
+            batch_identifiers={"run_id": "flight_validation_1"}
+        )
 
-    # Create validator
-    validator = context.get_validator(
-        batch_request=batch_request,
-        expectation_suite_name="flight_data_expectations",
-        create_expectation_suite_with_name_if_missing=True
-    )
+        # Create validator
+        validator = context.get_validator(
+            batch_request=batch_request,
+            expectation_suite_name="flight_data_expectations",
+            create_expectation_suite_with_name_if_missing=True
+        )
 
-    # Define expectations
-    validator.expect_column_values_to_not_be_null("flight_id")
-    validator.expect_column_values_to_be_in_set(
-        "status", 
-        ["scheduled", "departed", "landed", "delayed", "cancelled"]
-    )
+        # Define expectations
+        validator.expect_column_values_to_not_be_null("flight_id")
+        validator.expect_column_values_to_be_in_set(
+            "status", 
+            ["scheduled", "departed", "landed", "delayed", "cancelled"]
+        )
 
-    # Run validation
-    results = validator.validate()
-
-    # Stop Spark session
-    spark.stop()
-
-    return results
+        # Run validation
+        results = validator.validate()
+        
+        return {
+            "success": results.success,
+            "statistics": results.statistics,
+            "results": [str(result) for result in results.results]
+        }
+        
+    finally:
+        spark.stop()
 
 if __name__ == "__main__":
     validation_results = validate_iceberg_data()
