@@ -1,66 +1,93 @@
 from pyspark.sql import SparkSession
-from great_expectations import get_context
 from great_expectations.core.batch import RuntimeBatchRequest
+from great_expectations.data_context import EphemeralDataContext
+from great_expectations.core.expectation_suite import ExpectationSuite
 
-spark = SparkSession.builder \
-    .appName("GE Iceberg Validation") \
-    .master("spark://spark-master:7077") \
-    .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
-    .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
-    .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
-    .config("spark.sql.catalog.nessie.ref", "main") \
-    .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
-    .getOrCreate()
+def validate_iceberg_data():
+    # Initialize Spark with Iceberg configuration
+    spark = SparkSession.builder \
+        .appName("GE Iceberg Validation") \
+        .master("spark://spark-master:7077") \
+        .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
+        .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
+        .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
+        .config("spark.sql.catalog.nessie.ref", "main") \
+        .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
+        .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+        .getOrCreate()
 
+    try:
+        # Load Iceberg table
+        df = spark.table("nessie.silver_layer.flight_data")
 
-# 2️⃣ Read Iceberg table (Spark DataFrame)
-df = spark.read.format("iceberg").load("nessie.silver_layer.flight_data")
+        # Initialize Ephemeral DataContext
+        context = EphemeralDataContext(project_config={
+            "config_variables_file_path": None,
+            "datasources": {},
+            "stores": {
+                "expectations_store": {
+                    "class_name": "ExpectationsStore",
+                    "store_backend": {
+                        "class_name": "InMemoryStoreBackend"
+                    }
+                },
+                "validations_store": {
+                    "class_name": "ValidationsStore",
+                    "store_backend": {
+                        "class_name": "InMemoryStoreBackend"
+                    }
+                }
+            },
+            "expectations_store_name": "expectations_store",
+            "validations_store_name": "validations_store",
+            "data_docs_sites": {},
+            "anonymous_usage_statistics": {
+                "enabled": False
+            }
+        })
 
-# 3️⃣ Get GE context (automatically uses working_dir)
-context = get_context()
+        # Create expectation suite
+        suite = ExpectationSuite(
+            expectation_suite_name="flight_data_expectations"
+        )
 
-# 4️⃣ Create expectation suite (if doesn't exist)
-suite_name = "flight_data_expectations"
-if not context.expectations.expectation_suite_exists(expectation_suite_name=suite_name):
-    context.create_expectation_suite(expectation_suite_name=suite_name)
+        # Create batch request
+        batch_request = RuntimeBatchRequest(
+            datasource_name="spark_datasource",
+            data_connector_name="default_runtime_data_connector_name",
+            data_asset_name="flight_data_asset",
+            runtime_parameters={"batch_data": df},
+            batch_identifiers={"run_id": "flight_validation_1"}
+        )
 
-# 5️⃣ Create batch request with Spark DataFrame
-batch_request = RuntimeBatchRequest(
-    datasource_name="my_spark_datasource",
-    data_connector_name="default_runtime_data_connector_name",
-    data_asset_name="flight_data",  # this is logical only, not a file
-    runtime_parameters={"batch_data": df},
-    batch_identifiers={"default_identifier_name": "iceberg_validation"},
-)
+        # Create validator
+        validator = context.get_validator(
+            batch_request=batch_request,
+            expectation_suite=suite
+        )
 
-# 6️⃣ Get Validator and define expectations
-validator = context.get_validator(
-    batch_request=batch_request,
-    expectation_suite_name=suite_name
-)
+        # Define expectations
+        validator.expect_column_values_to_not_be_null("flight_id")
+        validator.expect_column_values_to_be_in_set(
+            "status", 
+            ["scheduled", "departed", "landed", "delayed", "cancelled"]
+        )
 
-# Define expectations
-validator.expect_column_values_to_not_be_null("flight_id")
-validator.expect_column_values_to_be_in_set("status", ["on-time", "delayed", "cancelled"])
-
-# 7️⃣ Save suite
-validator.save_expectation_suite(discard_failed_expectations=False)
-
-# 8️⃣ Run validation and print result
-results = validator.validate()
-
-# Optional: stop Spark session
-spark.stop()
-
-# Print result summary
-success = results["success"]
-print(f"\n✅ Data Validation {'PASSED' if success else 'FAILED'}")
-exit(0 if success else 1)
+        # Run validation
+        results = validator.validate()
+        
+        return {
+            "success": results.success,
+            "statistics": results.statistics,
+            "results": [str(result) for result in results.results]
+        }
+        
+    finally:
+        spark.stop()
 
 if __name__ == "__main__":
     validation_results = validate_iceberg_data()
