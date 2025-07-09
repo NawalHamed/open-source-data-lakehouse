@@ -86,7 +86,9 @@ services:
     volumes:
       - ./spark/conf:/home/spark/notebooks
       - ./spark/jobs:/opt/spark_jobs:rw
-    working_dir: /home/spark/notebooks
+      - ./great_expectations:/opt/great_expectations
+    #working_dir: /home/spark/notebooks
+    working_dir: /opt/great_expectations
     command: >
       bash -c "
         pip install great_expectations[pyspark] &&
