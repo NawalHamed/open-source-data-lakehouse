@@ -24,9 +24,9 @@ def validate_iceberg_data():
         # Load Iceberg table
         df = spark.table("nessie.silver_layer.flight_data")
 
-        # Initialize Ephemeral DataContext with complete configuration
+        # Initialize Ephemeral DataContext with updated configuration
         context = EphemeralDataContext(project_config={
-            "config_version": 3.0,  # Required config version
+            "config_version": 3.0,
             "config_variables_file_path": None,
             "datasources": {},
             "stores": {
@@ -37,7 +37,7 @@ def validate_iceberg_data():
                     }
                 },
                 "validations_store": {
-                    "class_name": "ValidationsStore",
+                    "class_name": "ValidationResultsStore",  # Updated class name
                     "store_backend": {
                         "class_name": "InMemoryStoreBackend"
                     }
@@ -73,7 +73,22 @@ def validate_iceberg_data():
             batch_identifiers={"run_id": "flight_validation_1"}
         )
 
-        # Create validator
+        # Create validator - need to add datasource first
+        context.add_datasource(
+            name="spark_datasource",
+            class_name="Datasource",
+            execution_engine={
+                "class_name": "SparkDFExecutionEngine",
+                "force_reuse_spark_context": True
+            },
+            data_connectors={
+                "default_runtime_data_connector_name": {
+                    "class_name": "RuntimeDataConnector",
+                    "batch_identifiers": ["run_id"]
+                }
+            }
+        )
+
         validator = context.get_validator(
             batch_request=batch_request,
             expectation_suite=suite
