@@ -249,7 +249,7 @@ services:
       OPENMETADATA_DATABASE_NAME: airflow
       AUTHORIZER_CLASS_NAME: "org.openmetadata.service.security.DefaultAuthorizer"
       AUTHORIZER_ENABLE_SECURE_SOCKET: "false"
-	    VIRTUAL_HOST: openmetadata.rihal.dev
+      VIRTUAL_HOST: openmetadata.rihal.dev
       VIRTUAL_PORT: 8585
     depends_on:
       - postgres
