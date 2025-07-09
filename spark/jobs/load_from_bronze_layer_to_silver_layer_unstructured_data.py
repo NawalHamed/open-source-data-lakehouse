@@ -1,13 +1,14 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import input_file_name, regexp_replace
-from pyspark.sql.types import StructType, StructField, StringType
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from PIL import Image
 import numpy as np
+import pytesseract
 import io
 
 # Step 1: SparkSession with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
-    .appName("Image Metadata + Decoded Data to Iceberg") \
+    .appName("Image Metadata + Decoded Data + OCR Text to Iceberg") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
@@ -25,42 +26,53 @@ image_df = spark.read.format("binaryFile") \
     .load("s3a://lakehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
     .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
 
-# Step 3: Collect and decode with Pillow
+# Step 3: Decode and OCR
 image_data_list = image_df.collect()
-
-print(f"\nProcessing {len(image_data_list)} images:\n")
-
 results = []
+
 for row in image_data_list:
-    file_path = row["path"]
+    file_name = row["file_name"]
     binary_data = row["content"]
 
     try:
         img = Image.open(io.BytesIO(binary_data))
         img_array = np.array(img)
-        decode_status = f"SUCCESS - Shape: {img_array.shape}"
+        height, width = img.height, img.width
+        mode = img.mode
+        n_channels = img_array.shape[2] if len(img_array.shape) == 3 else 1
+        pixel_sample = img_array[:2, :2].tolist()
+        pixel_data_str = str(pixel_sample)
+        ocr_text = pytesseract.image_to_string(img)
+        decode_status = "SUCCESS"
     except Exception as e:
-        decode_status = f"ERROR decoding: {str(e)}"
+        height, width, n_channels, mode = None, None, None, None
+        pixel_data_str = ""
+        ocr_text = ""
+        decode_status = f"ERROR: {str(e)}"
 
-    print(f"Image: {file_path}\nStatus: {decode_status}\n{'='*50}")
-    results.append((file_path, decode_status))
+    results.append((
+        file_name, decode_status, height, width, n_channels, mode, pixel_data_str, ocr_text
+    ))
 
-# Step 4: Create Spark DataFrame without pandas
+# Step 4: Create Spark DataFrame
 schema = StructType([
-    StructField("file_path", StringType(), True),
-    StructField("decode_status", StringType(), True)
+    StructField("file_name", StringType(), True),
+    StructField("decode_status", StringType(), True),
+    StructField("height", IntegerType(), True),
+    StructField("width", IntegerType(), True),
+    StructField("n_channels", IntegerType(), True),
+    StructField("mode", StringType(), True),
+    StructField("pixel_data", StringType(), True),
+    StructField("ocr_text", StringType(), True),
 ])
 
 final_df = spark.createDataFrame(results, schema=schema)
 
-
-# Step 5: Write to Iceberg Table
+# Step 5: Write to Iceberg
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
+spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_text")
 
+final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace()
 
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_status")
-
-final_df.writeTo("nessie.silver_layer.image_metadata_with_status").createOrReplace()
-
-# Step 6: Validate
-spark.read.table("nessie.silver_layer.image_metadata_with_status").show(truncate=False)
+# Step 6: Show sample
+spark.read.table("nessie.silver_layer.image_metadata_with_text").show(truncate=False)
