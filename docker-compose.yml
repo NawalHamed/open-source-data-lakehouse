@@ -265,6 +265,8 @@ volumes:
   superset_data:
   cloudbeaver-config:
   nessie_data:
+  openmetadata_data:
+
 
 networks:
   shared-network:
