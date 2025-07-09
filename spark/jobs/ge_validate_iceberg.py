@@ -24,8 +24,9 @@ def validate_iceberg_data():
         # Load Iceberg table
         df = spark.table("nessie.silver_layer.flight_data")
 
-        # Initialize Ephemeral DataContext
+        # Initialize Ephemeral DataContext with complete configuration
         context = EphemeralDataContext(project_config={
+            "config_version": 3.0,  # Required config version
             "config_variables_file_path": None,
             "datasources": {},
             "stores": {
@@ -40,12 +41,20 @@ def validate_iceberg_data():
                     "store_backend": {
                         "class_name": "InMemoryStoreBackend"
                     }
+                },
+                "evaluation_parameter_store": {
+                    "class_name": "EvaluationParameterStore"
                 }
             },
             "expectations_store_name": "expectations_store",
             "validations_store_name": "validations_store",
+            "evaluation_parameter_store_name": "evaluation_parameter_store",
             "data_docs_sites": {},
             "anonymous_usage_statistics": {
+                "enabled": False
+            },
+            "notebooks": None,
+            "concurrency": {
                 "enabled": False
             }
         })
