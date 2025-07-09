@@ -25,7 +25,7 @@ def validate_iceberg_data():
         # Load Iceberg table
         df = spark.table("nessie.silver_layer.flight_data")
 
-        # Initialize Ephemeral DataContext with minimal required configuration for GE 1.1.0
+        # Initialize Ephemeral DataContext with proper GE 1.1.0 configuration
         context = EphemeralDataContext(project_config={
             "config_version": 3.0,
             "datasources": {
@@ -43,7 +43,6 @@ def validate_iceberg_data():
                     }
                 }
             },
-            # Minimal stores configuration for GE 1.1.0
             "stores": {
                 "expectations_store": {
                     "class_name": "ExpectationsStore",
@@ -60,7 +59,6 @@ def validate_iceberg_data():
             },
             "expectations_store_name": "expectations_store",
             "validations_store_name": "validation_results_store",
-            # Removed evaluation_parameter_store as it's not needed in basic validation
             "checkpoint_store_name": None,
             "profiler_store_name": None,
             "anonymous_usage_statistics": {
@@ -68,8 +66,11 @@ def validate_iceberg_data():
             }
         })
 
-        # Create expectation suite
-        suite = context.add_expectation_suite("flight_data_expectations")
+        # Create expectation suite - CORRECTED METHOD for GE 1.1.0
+        suite = context.create_expectation_suite(
+            expectation_suite_name="flight_data_expectations",
+            overwrite_existing=True
+        )
 
         # Create batch request
         batch_request = RuntimeBatchRequest(
@@ -81,7 +82,7 @@ def validate_iceberg_data():
         )
 
         # Create validator
-        validator: Validator = context.get_validator(
+        validator = context.get_validator(
             batch_request=batch_request,
             expectation_suite=suite
         )
@@ -96,6 +97,9 @@ def validate_iceberg_data():
             "flight_number",
             r"^[A-Z]{2}\d{3,4}$"  # Example: AA123 or BA1234
         )
+
+        # Save expectations
+        context.save_expectation_suite(suite)
 
         # Run validation
         results = validator.validate()
