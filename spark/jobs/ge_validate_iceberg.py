@@ -25,7 +25,7 @@ def validate_iceberg_data():
         # Load Iceberg table
         df = spark.table("nessie.silver_layer.flight_data")
 
-        # Initialize Ephemeral DataContext with updated configuration for GE 1.1.0
+        # Initialize Ephemeral DataContext with minimal required configuration for GE 1.1.0
         context = EphemeralDataContext(project_config={
             "config_version": 3.0,
             "datasources": {
@@ -43,6 +43,7 @@ def validate_iceberg_data():
                     }
                 }
             },
+            # Minimal stores configuration for GE 1.1.0
             "stores": {
                 "expectations_store": {
                     "class_name": "ExpectationsStore",
@@ -50,25 +51,21 @@ def validate_iceberg_data():
                         "class_name": "InMemoryStoreBackend"
                     }
                 },
-                "validation_results_store": {  # Updated name and class for GE 1.1.0
+                "validation_results_store": {
                     "class_name": "ValidationResultsStore",
                     "store_backend": {
                         "class_name": "InMemoryStoreBackend"
                     }
-                },
-                "evaluation_parameter_store": {
-                    "class_name": "EvaluationParameterStore"
                 }
             },
             "expectations_store_name": "expectations_store",
-            "validations_store_name": "validation_results_store",  # Updated to match store name
-            "evaluation_parameter_store_name": "evaluation_parameter_store",
-            "data_docs_sites": {},
+            "validations_store_name": "validation_results_store",
+            # Removed evaluation_parameter_store as it's not needed in basic validation
+            "checkpoint_store_name": None,
+            "profiler_store_name": None,
             "anonymous_usage_statistics": {
                 "enabled": False
-            },
-            "checkpoint_store_name": None,
-            "profiler_store_name": None
+            }
         })
 
         # Create expectation suite
@@ -99,9 +96,6 @@ def validate_iceberg_data():
             "flight_number",
             r"^[A-Z]{2}\d{3,4}$"  # Example: AA123 or BA1234
         )
-
-        # Save expectations (optional)
-        validator.save_expectation_suite(discard_failed_expectations=False)
 
         # Run validation
         results = validator.validate()
