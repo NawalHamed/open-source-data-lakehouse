@@ -29,14 +29,18 @@ def validate_iceberg_data():
             "config_version": 3.0,
             "datasources": {
                 "spark_datasource": {
-                    "class_name": "Datasource",
+                    # FIX: Change "class_name" from "Datasource" to "SparkDatasource"
+                    "class_name": "SparkDatasource", # <<< CHANGED THIS LINE
+                    "module_name": "great_expectations.datasource", # <<< ADD THIS LINE for clarity
                     "execution_engine": {
                         "class_name": "SparkDFExecutionEngine",
+                        "module_name": "great_expectations.execution_engine", # <<< ADD THIS LINE for clarity
                         "force_reuse_spark_context": True
                     },
                     "data_connectors": {
                         "default_runtime_data_connector": {
                             "class_name": "RuntimeDataConnector",
+                            "module_name": "great_expectations.datasource.data_connector", # <<< ADD THIS LINE for clarity
                             "batch_identifiers": ["run_id"]
                         }
                     }
@@ -57,9 +61,8 @@ def validate_iceberg_data():
             "anonymous_usage_statistics": {"enabled": False}
         })
 
-        # Create expectation suite (FIXED for Great Expectations 1.x)
-        # For GE 1.1.0, 'name' must be provided directly in the constructor.
-        suite = ExpectationSuite(name="flight_data_expectations") 
+        # Create expectation suite (Corrected for GE 1.1.0)
+        suite = ExpectationSuite(name="flight_data_expectations")
 
         # Create batch request
         batch_request = RuntimeBatchRequest(
