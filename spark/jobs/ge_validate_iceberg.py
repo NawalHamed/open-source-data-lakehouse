@@ -19,29 +19,31 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
     
-# Step 2: Load Iceberg table into Spark DataFrame
+# Step 2: Load Iceberg data
 df = spark.read.format("iceberg").load("nessie.silver_layer.flight_data")
 
-# Step 3: Create GE context
-context = BaseDataContext()
+# Step 3: Initialize context
+context = get_context()  # ✅ auto-detects ./great_expectations/
 
-# Step 4: Create RuntimeBatchRequest
+# Step 4: Create Runtime Batch Request
 batch_request = RuntimeBatchRequest(
     datasource_name="my_spark_datasource",
     data_connector_name="default_runtime_data_connector_name",
     data_asset_name="flight_data",
     runtime_parameters={"batch_data": df},
-    batch_identifiers={"default_identifier_name": "iceberg_validation"},
+    batch_identifiers={"default_identifier_name": "iceberg_batch"}
 )
 
-# Step 5: Create Validator (no suite needed for programmatic expectations)
+# Step 5: Get validator and apply expectations
 validator = context.get_validator(
     batch_request=batch_request,
-    expectation_suite_name="tmp_flight_suite"
+    expectation_suite_name="tmp_suite",  # Temporary suite (not saved)
+    create_expectation_suite_with_name_if_missing=True
 )
+
 validator.expect_column_values_to_not_be_null("flight_id")
 validator.expect_column_values_to_be_in_set("status", ["on-time", "delayed", "cancelled"])
 
-# Step 6: Validate
+# Step 6: Validate and print results
 results = validator.validate()
 print(results)
