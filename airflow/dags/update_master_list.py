@@ -3,7 +3,8 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import random
 import json
-from io import BytesIO
+import csv
+from io import BytesIO, StringIO
 from string import ascii_uppercase
 from itertools import product
 from minio import Minio
@@ -17,8 +18,8 @@ MINIO_BUCKET = 'lakehouse'
 # Master data paths
 MASTER_AIRLINE_PATH = "bronze_layer/master/airlines_data.json"
 MASTER_AIRPORT_PATH = "bronze_layer/master/airports_data.json"
-MASTER_COUNTRY_PATH = "bronze_layer/master/countries_data.json"
-MASTER_CITY_PATH = "bronze_layer/master/cities_data.json"
+MASTER_COUNTRY_PATH = "bronze_layer/master/countries_data.csv"
+MASTER_CITY_PATH = "bronze_layer/master/cities_data.csv"
 
 COUNTRIES = {
     "US": {"name": "United States", "hubs": ["ATL", "DFW", "ORD", "LAX", "JFK"]},
@@ -131,17 +132,50 @@ class CityGenerator:
         }
 
 # ============== HELPERS ==============
-def load_existing_data(client, object_name):
+def load_existing_json_data(client, object_name):
     try:
         obj = client.get_object(MINIO_BUCKET, object_name)
         return json.loads(obj.read())
     except:
         return []
 
-def update_record(client, master_path, record_id, updates):
+def load_existing_csv_data(client, object_name):
     try:
-        data = load_existing_data(client, master_path)
+        obj = client.get_object(MINIO_BUCKET, object_name)
+        csv_data = obj.read().decode('utf-8').splitlines()
+        return list(csv.DictReader(csv_data))
+    except:
+        return []
+
+def save_as_json(client, object_name, data):
+    client.put_object(
+        MINIO_BUCKET, object_name,
+        BytesIO(json.dumps(data).encode()),
+        len(json.dumps(data)),
+        "application/json"
+    )
+
+def save_as_csv(client, object_name, data):
+    if not data:
+        return
+        
+    output = StringIO()
+    writer = csv.DictWriter(output, fieldnames=data[0].keys())
+    writer.writeheader()
+    writer.writerows(data)
+    
+    client.put_object(
+        MINIO_BUCKET, object_name,
+        BytesIO(output.getvalue().encode()),
+        len(output.getvalue()),
+        "text/csv"
+    )
+
+def update_record(client, master_path, record_id, updates, is_csv=False):
+    try:
+        data = load_existing_csv_data(client, master_path) if is_csv else load_existing_json_data(client, master_path)
         updated = False
+        
         for record in data:
             if str(record['id']) == str(record_id):
                 record.update(updates)
@@ -150,12 +184,10 @@ def update_record(client, master_path, record_id, updates):
                 break
         
         if updated:
-            client.put_object(
-                MINIO_BUCKET, master_path,
-                BytesIO(json.dumps(data).encode()),
-                len(json.dumps(data)),
-                "application/json"
-            )
+            if is_csv:
+                save_as_csv(client, master_path, data)
+            else:
+                save_as_json(client, master_path, data)
             return True
         return False
     except Exception as e:
@@ -165,7 +197,7 @@ def update_record(client, master_path, record_id, updates):
 # ============== ADDITION TASKS ==============
 def add_new_airline():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_AIRLINE_PATH)
+    data = load_existing_json_data(client, MASTER_AIRLINE_PATH)
     now = datetime.utcnow().isoformat()
     ag = AirlineGenerator()
     
@@ -176,17 +208,12 @@ def add_new_airline():
     new_airline = ag.generate_airline(len(data), now)
     data.append(new_airline)
 
-    client.put_object(
-        MINIO_BUCKET, MASTER_AIRLINE_PATH,
-        BytesIO(json.dumps(data).encode()),
-        len(json.dumps(data)),
-        "application/json"
-    )
+    save_as_json(client, MASTER_AIRLINE_PATH, data)
     print(f"✅ Added new airline: {new_airline['name']} ({new_airline['iata']})")
 
 def add_new_airport():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_AIRPORT_PATH)
+    data = load_existing_json_data(client, MASTER_AIRPORT_PATH)
     now = datetime.utcnow().isoformat()
     ag = AirportGenerator()
     
@@ -197,34 +224,24 @@ def add_new_airport():
     new_airport = ag.generate_airport(len(data), now)
     data.append(new_airport)
 
-    client.put_object(
-        MINIO_BUCKET, MASTER_AIRPORT_PATH,
-        BytesIO(json.dumps(data).encode()),
-        len(json.dumps(data)),
-        "application/json"
-    )
+    save_as_json(client, MASTER_AIRPORT_PATH, data)
     print(f"✅ Added new airport: {new_airport['airport_name']} ({new_airport['iata_code']})")
 
 def add_new_country():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_COUNTRY_PATH)
+    data = load_existing_csv_data(client, MASTER_COUNTRY_PATH)
     now = datetime.utcnow().isoformat()
     cg = CountryGenerator()
 
     new_country = cg.generate_country(len(data), now)
     data.append(new_country)
 
-    client.put_object(
-        MINIO_BUCKET, MASTER_COUNTRY_PATH,
-        BytesIO(json.dumps(data).encode()),
-        len(json.dumps(data)),
-        "application/json"
-    )
+    save_as_csv(client, MASTER_COUNTRY_PATH, data)
     print(f"✅ Added new country: {new_country['name']} ({new_country['iso2']})")
 
 def add_new_city():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_CITY_PATH)
+    data = load_existing_csv_data(client, MASTER_CITY_PATH)
     now = datetime.utcnow().isoformat()
     cg = CityGenerator()
     
@@ -235,54 +252,49 @@ def add_new_city():
     new_city = cg.generate_city(len(data), now)
     data.append(new_city)
 
-    client.put_object(
-        MINIO_BUCKET, MASTER_CITY_PATH,
-        BytesIO(json.dumps(data).encode()),
-        len(json.dumps(data)),
-        "application/json"
-    )
+    save_as_csv(client, MASTER_CITY_PATH, data)
     print(f"✅ Added new city: {new_city['city_name']} ({new_city['iata_code']})")
 
 # ============== UPDATE TASKS ==============
 def update_airline():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_AIRLINE_PATH)
+    data = load_existing_json_data(client, MASTER_AIRLINE_PATH)
     if data:
         record = random.choice(data)
         updates = {
             'status': random.choice(['active', 'inactive', 'bankrupt']),
             'hub': random.choice(list(COUNTRIES.values()))['hubs'][0]
         }
-        if update_record(client, MASTER_AIRLINE_PATH, record['id'], updates):
+        if update_record(client, MASTER_AIRLINE_PATH, record['id'], updates, is_csv=False):
             print(f"✅ Updated airline {record['id']} with {updates}")
 
 def update_airport():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_AIRPORT_PATH)
+    data = load_existing_json_data(client, MASTER_AIRPORT_PATH)
     if data:
         record = random.choice(data)
         updates = {
             'airport_name': f"Updated {record['airport_name']}",
             'country_iso2': random.choice(list(COUNTRIES.keys()))
         }
-        if update_record(client, MASTER_AIRPORT_PATH, record['id'], updates):
+        if update_record(client, MASTER_AIRPORT_PATH, record['id'], updates, is_csv=False):
             print(f"✅ Updated airport {record['id']} with {updates}")
 
 def update_country():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_COUNTRY_PATH)
+    data = load_existing_csv_data(client, MASTER_COUNTRY_PATH)
     if data:
         record = random.choice(data)
         updates = {
             'population': random.randint(1000000, 1000000000),
             'capital': f"New {record['capital']}"
         }
-        if update_record(client, MASTER_COUNTRY_PATH, record['id'], updates):
+        if update_record(client, MASTER_COUNTRY_PATH, record['id'], updates, is_csv=True):
             print(f"✅ Updated country {record['id']} with {updates}")
 
 def update_city():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_data(client, MASTER_CITY_PATH)
+    data = load_existing_csv_data(client, MASTER_CITY_PATH)
     if data:
         record = random.choice(data)
         updates = {
@@ -290,7 +302,7 @@ def update_city():
             'latitude': round(random.uniform(-90, 90), 6),
             'longitude': round(random.uniform(-180, 180), 6)
         }
-        if update_record(client, MASTER_CITY_PATH, record['id'], updates):
+        if update_record(client, MASTER_CITY_PATH, record['id'], updates, is_csv=True):
             print(f"✅ Updated city {record['id']} with {updates}")
 
 # ============== DAG CONFIGURATION ==============
@@ -323,7 +335,7 @@ with DAG(
 
     # Option 1: Separate addition and update flows
     addition_flow = add_airline >> add_airport >> add_country >> add_city
-#    update_flow = upd_airline >> upd_airport >> upd_country >> upd_city
+  #  update_flow = upd_airline >> upd_airport >> upd_country >> upd_city
 
     # Set the dependencies
     addition_flow
