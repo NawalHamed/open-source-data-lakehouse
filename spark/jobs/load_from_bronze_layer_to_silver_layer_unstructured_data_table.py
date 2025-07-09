@@ -32,16 +32,35 @@ image_data_list = image_df.collect()
 results = []
 
 def extract_table_as_json(image: Image.Image):
-    """Extracts table-like OCR content into structured JSON"""
-    raw_text = pytesseract.image_to_string(image)
+    raw_text = pytesseract.image_to_string(image, config='--oem 3 --psm 6')
     lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
-    headers = lines[0].split()
+
+    headers = ["Flight", "Airline", "From", "To", "Aircraft", "Distance", "Status"]
     table = []
-    for row in lines[1:]:
-        cols = row.split()
-        if len(cols) == len(headers):
-            row_dict = dict(zip(headers, cols))
-            table.append(row_dict)
+
+    for line in lines:
+        parts = line.split()
+        if len(parts) >= 7:
+            try:
+                flight = parts[0]
+                airline = parts[1]
+                from_airport = parts[2]
+                to_airport = parts[3]
+                aircraft = " ".join(parts[4:-2])
+                distance = parts[-2].replace("km", "")
+                status = parts[-1]
+
+                table.append({
+                    "Flight": flight,
+                    "Airline": airline,
+                    "From": from_airport,
+                    "To": to_airport,
+                    "Aircraft": aircraft,
+                    "Distance": distance,
+                    "Status": status
+                })
+            except Exception:
+                continue
     return json.dumps(table)
 
 for row in image_data_list:
