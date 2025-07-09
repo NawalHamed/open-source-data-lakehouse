@@ -21,12 +21,12 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# Step 2: Read images as binary
+# Step 2: Read images from all date-partitioned folders
 image_df = spark.read.format("binaryFile") \
-    .load("s3a://lakehouse/bronze_layer/unstructured_images_raw_data/*.jpg") \
+    .load("s3a://lakehouse/bronze_layer/*/*/*/images/*.jpg") \
     .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
 
-# Step 3: Decode and OCR
+# Step 3: Decode + extract metadata + OCR
 image_data_list = image_df.collect()
 results = []
 
@@ -54,7 +54,7 @@ for row in image_data_list:
         file_name, decode_status, height, width, n_channels, mode, pixel_data_str, ocr_text
     ))
 
-# Step 4: Create Spark DataFrame
+# Step 4: Create DataFrame
 schema = StructType([
     StructField("file_name", StringType(), True),
     StructField("decode_status", StringType(), True),
@@ -68,11 +68,11 @@ schema = StructType([
 
 final_df = spark.createDataFrame(results, schema=schema)
 
-# Step 5: Write to Iceberg
+# Step 5: Write to Iceberg table
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_text")
 
 final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace()
 
-# Step 6: Show sample
+# Step 6: Show result
 spark.read.table("nessie.silver_layer.image_metadata_with_text").show(truncate=False)
