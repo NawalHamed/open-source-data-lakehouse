@@ -81,6 +81,8 @@ services:
       AWS_S3_ENDPOINT: http://minio_v:9009
       NESSIE_URI: http://nessie:19120/api/v2
       WAREHOUSE: /warehouse
+      VIRTUAL_HOST: spark.rihal.dev
+      VIRTUAL_PORT: 8082
     volumes:
       - ./spark/conf:/home/spark/notebooks
       - ./spark/jobs:/opt/spark_jobs:rw
