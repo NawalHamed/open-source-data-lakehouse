@@ -241,6 +241,7 @@ services:
     ports:
       - "8588:8585"
     environment:
+      OPENMETADATA_DATABASE_TYPE: postgres   
       OPENMETADATA_DATABASE_HOST: postgres_v
       OPENMETADATA_DATABASE_PORT: 5432
       OPENMETADATA_DATABASE_USER: airflow
