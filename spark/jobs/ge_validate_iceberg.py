@@ -2,7 +2,7 @@
 from pyspark.sql import SparkSession
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.data_context import EphemeralDataContext
-from great_expectations.core.expectation_suite import ExpectationSuite # Keep this import
+from great_expectations.core.expectation_suite import ExpectationSuite
 
 def validate_iceberg_data():
     # Initialize Spark with Iceberg configuration
@@ -57,9 +57,9 @@ def validate_iceberg_data():
             "anonymous_usage_statistics": {"enabled": False}
         })
 
-        # Create expectation suite (FIXED LINE)
-        suite = ExpectationSuite()
-        suite.expectation_suite_name = "flight_data_expectations" # Set the name as an attribute
+        # Create expectation suite (FIXED for Great Expectations 1.x)
+        # For GE 1.1.0, 'name' must be provided directly in the constructor.
+        suite = ExpectationSuite(name="flight_data_expectations") 
 
         # Create batch request
         batch_request = RuntimeBatchRequest(
