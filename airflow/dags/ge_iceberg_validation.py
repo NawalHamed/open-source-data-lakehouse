@@ -1,11 +1,10 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime
-import pandas as pd
-import great_expectations as ge
-from great_expectations.core.batch import RuntimeBatchRequest
-from great_expectations.data_context.types.base import DataContextConfig
 from great_expectations.data_context import EphemeralDataContext
+from great_expectations.core.batch import RuntimeBatchRequest
+import great_expectations as ge
+from pyspark.sql import SparkSession
 
 default_args = {
     'owner': 'airflow',
@@ -18,73 +17,108 @@ dag = DAG(
     default_args=default_args,
     schedule_interval=None,
     catchup=False,
-    description='Run Great Expectations validation on Iceberg table',
+    description='Run Great Expectations validation on Spark dataframe (Iceberg table)',
 )
 
-def validate_iceberg_table():
-    # 1. Sample dataframe
-    df = pd.DataFrame({
-        "flight_id": [101, 102, None, 104],
-        "airline": ["WY", "QR", "EK", "BA"],
-        "distance_km": [700, 1500, 900, None]
-    })
+def validate_iceberg_table_spark():
+    # 1️⃣ Create Spark session
+    spark = SparkSession.builder \
+        .appName("GE_Iceberg_Validation") \
+        .master("local[*]") \
+        .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
+        .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
+        .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
+        .config("spark.sql.catalog.nessie.ref", "main") \
+        .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
+        .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
+        .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .getOrCreate()
 
-    # 2. Define GE config (no need to import DatasourceConfig!)
-    project_config = DataContextConfig(
-        datasources={
-            "my_pandas_datasource": {
-                "class_name": "Datasource",
-                "execution_engine": {"class_name": "PandasExecutionEngine"},
+    # 2️⃣ Load Iceberg table
+    df = spark.read.format("iceberg").load("nessie.gold_layer.flight_performance_summary_v1")
+
+    # 3️⃣ Define GE project config manually
+    project_config = {
+        "datasources": {
+            "my_spark_datasource": {
+                "execution_engine": {"class_name": "SparkDFExecutionEngine"},
                 "data_connectors": {
-                    "runtime_data_connector": {
+                    "default_runtime_data_connector_name": {
                         "class_name": "RuntimeDataConnector",
-                        "batch_identifiers": ["run_id"]
+                        "batch_identifiers": ["default_identifier_name"]
                     }
-                }
+                },
+                "class_name": "Datasource"
+            }
+        },
+        "config_version": 1,
+        "expectations_store_name": "expectations_store",
+        "validation_results_store_name": "validation_results_store",
+        "data_docs_store_name": "data_docs_store",
+        "stores": {
+            "expectations_store": {
+                "class_name": "ExpectationsStore",
+                "store_backend": {"class_name": "InMemoryStoreBackend"}
+            },
+            "validation_results_store": {
+                "class_name": "ValidationResultsStore",
+                "store_backend": {"class_name": "InMemoryStoreBackend"}
+            },
+            "data_docs_store": {
+                "class_name": "DataDocsStore",
+                "store_backend": {"class_name": "InMemoryStoreBackend"}
+            }
+        },
+        "data_docs_sites": {
+            "local_site": {
+                "class_name": "SiteBuilder",
+                "store_backend": {"class_name": "InMemoryStoreBackend"},
+                "site_index_builder": {"class_name": "DefaultSiteIndexBuilder"}
             }
         }
-    )
+    }
 
-    # 3. In-memory context
+    # 4️⃣ Create ephemeral GE context
     context = EphemeralDataContext(project_config=project_config)
 
-    # 4. Batch request
+    # 5️⃣ Create RuntimeBatchRequest
     batch_request = RuntimeBatchRequest(
-        datasource_name="my_pandas_datasource",
-        data_connector_name="runtime_data_connector",
-        data_asset_name="my_airflow_asset",
+        datasource_name="my_spark_datasource",
+        data_connector_name="default_runtime_data_connector_name",
+        data_asset_name="spark_iceberg_asset",
         runtime_parameters={"batch_data": df},
-        batch_identifiers={"run_id": "airflow_validation_001"}
+        batch_identifiers={"default_identifier_name": "run_20250710"}
     )
 
-    # 5. Create expectation suite
-    suite_name = "airflow_suite"
+    # 6️⃣ Create expectation suite
+    suite_name = "spark_iceberg_suite"
     context.create_expectation_suite(expectation_suite_name=suite_name, overwrite_existing=True)
 
-    # 6. Get validator and define expectations
+    # 7️⃣ Get validator and define expectations
     validator = context.get_validator(
         batch_request=batch_request,
         expectation_suite_name=suite_name
     )
 
-    validator.expect_column_values_to_not_be_null("flight_id")
-    validator.expect_column_values_to_not_be_null("distance_km")
-    validator.expect_column_values_to_be_in_set("airline", ["WY", "QR", "EK", "BA", "LH", "TK"])
+    validator.expect_column_to_exist("flight_number")
+    validator.expect_column_values_to_not_be_null("flight_date")
+    validator.expect_column_values_to_be_between("distance_km", 0, 20000)
 
-    # 7. Validate
     results = validator.validate()
 
-    # 8. Print results
+    # 8️⃣ Output result
     if not results.success:
         raise ValueError("❌ Validation failed.")
     else:
         print("✅ Validation passed.")
 
-# PythonOperator task
-validation_task = PythonOperator(
+# Airflow Task
+run_ge_check = PythonOperator(
     task_id='run_ge_check',
-    python_callable=validate_iceberg_table,
+    python_callable=validate_iceberg_table_spark,
     dag=dag
 )
 
-validation_task
+run_ge_check
