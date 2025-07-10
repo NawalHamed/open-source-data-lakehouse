@@ -35,23 +35,11 @@ def validate_iceberg_data():
         context = EphemeralDataContext(project_config={
             "config_version": 3.0,
             "datasources": {
-                "spark_datasource": {
+                "spark_datasource": {  # Changed to match GE 1.x naming convention
                     "class_name": "Datasource",
                     "execution_engine": {
                         "class_name": "SparkDFExecutionEngine",
                         "force_reuse_spark_context": True,
-                        "spark_config": {
-                            "spark.sql.catalog.nessie": "org.apache.iceberg.spark.SparkCatalog",
-                            "spark.sql.catalog.nessie.catalog-impl": "org.apache.iceberg.nessie.NessieCatalog",
-                            "spark.sql.catalog.nessie.uri": "http://nessie:19120/api/v1",
-                            "spark.sql.catalog.nessie.ref": "main",
-                            "spark.sql.catalog.nessie.warehouse": "s3a://lakehouse/",
-                            "spark.hadoop.fs.s3a.endpoint": "http://minio:9009",
-                            "spark.hadoop.fs.s3a.access.key": "minioadmin",
-                            "spark.hadoop.fs.s3a.secret.key": "minioadmin",
-                            "spark.hadoop.fs.s3a.path.style.access": "true",
-                            "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
-                        }
                     },
                     "data_connectors": {
                         "default_runtime_data_connector": {
@@ -76,10 +64,14 @@ def validate_iceberg_data():
             "anonymous_usage_statistics": {"enabled": False}
         })
 
-        # Debug: Verify datasource is properly registered
+        # Debug: Verify datasource is properly registered (GE 1.x compatible)
         print("✅ Datasources in context:", context.list_datasources())
+        
+        # Get datasource in GE 1.x compatible way
+        datasource = context.get_datasource("spark_datasource")
+        print("✅ Successfully accessed datasource:", datasource.name)
         print("✅ Available data connectors:", 
-              context.datasources["spark_datasource"].get_available_data_connector_names())
+              [connector_name for connector_name in datasource.data_connectors.keys()])
 
         # Step 4: Define expectation suite in memory
         suite = ExpectationSuite(name="flight_data_expectations")
