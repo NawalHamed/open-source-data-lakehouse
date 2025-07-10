@@ -78,4 +78,40 @@ def validate_iceberg_data():
         batch_request = RuntimeBatchRequest(
             datasource_name="spark_datasource",  # must match context
             data_connector_name="default_runtime_data_connector",
-            d
+            data_asset_name="flight_data_asset",  # any name you choose
+            runtime_parameters={"batch_data": df},
+            batch_identifiers={"run_id": "flight_validation_1"}
+        )
+
+        # Step 6: Get validator and run expectations
+        validator = context.get_validator(
+            batch_request=batch_request,
+            expectation_suite=suite
+        )
+
+        validator.expect_column_values_to_not_be_null("flight_id")
+        validator.expect_column_values_to_be_in_set(
+            "status", ["scheduled", "departed", "landed", "delayed", "cancelled"]
+        )
+
+        # Step 7: Run validation
+        results = validator.validate()
+
+        # Step 8: Return or log results
+        print("✅ Validation Complete")
+        return {
+            "success": results.success,
+            "statistics": results.statistics,
+            "results": [str(result) for result in results.results]
+        }
+
+    finally:
+        print("🧹 Stopping Spark...")
+        spark.stop()
+
+
+# Entry point
+if __name__ == "__main__":
+    validation_results = validate_iceberg_data()
+    print("📊 Validation Results:")
+    print(validation_results)
