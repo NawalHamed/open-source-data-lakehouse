@@ -11,7 +11,7 @@ def validate_flight_data():
     engine = create_engine("trino://user@trino:8080/iceberg/gold_layer")
 
     # Step 2: Load data into pandas
-    query = "SELECT * FROM flight_performance_summary_test LIMIT 100"
+    query = "SELECT * FROM flight_performance_summary_v1"
     df = pd.read_sql(query, engine)
 
     # Step 3: Apply Great Expectations
