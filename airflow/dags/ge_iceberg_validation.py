@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import great_expectations as ge
 from great_expectations.core.batch import RuntimeBatchRequest
-from great_expectations.data_context.types.base import DataContextConfig, DatasourceConfig
+from great_expectations.data_context.types.base import DataContextConfig
 from great_expectations.data_context import EphemeralDataContext
 
 default_args = {
@@ -22,33 +22,33 @@ dag = DAG(
 )
 
 def validate_iceberg_table():
-    # 1. Create sample dataframe (replace with real Iceberg/Trino query later)
+    # 1. Sample dataframe
     df = pd.DataFrame({
         "flight_id": [101, 102, None, 104],
         "airline": ["WY", "QR", "EK", "BA"],
         "distance_km": [700, 1500, 900, None]
     })
 
-    # 2. Define project config for EphemeralDataContext
+    # 2. Define GE config (no need to import DatasourceConfig!)
     project_config = DataContextConfig(
         datasources={
-            "my_pandas_datasource": DatasourceConfig(
-                class_name="Datasource",
-                execution_engine={"class_name": "PandasExecutionEngine"},
-                data_connectors={
+            "my_pandas_datasource": {
+                "class_name": "Datasource",
+                "execution_engine": {"class_name": "PandasExecutionEngine"},
+                "data_connectors": {
                     "runtime_data_connector": {
                         "class_name": "RuntimeDataConnector",
                         "batch_identifiers": ["run_id"]
                     }
                 }
-            )
+            }
         }
     )
 
-    # 3. Create in-memory context
+    # 3. In-memory context
     context = EphemeralDataContext(project_config=project_config)
 
-    # 4. Create batch request
+    # 4. Batch request
     batch_request = RuntimeBatchRequest(
         datasource_name="my_pandas_datasource",
         data_connector_name="runtime_data_connector",
@@ -74,13 +74,13 @@ def validate_iceberg_table():
     # 7. Validate
     results = validator.validate()
 
-    # 8. Check result
+    # 8. Print results
     if not results.success:
         raise ValueError("❌ Validation failed.")
     else:
         print("✅ Validation passed.")
 
-# Python Operator
+# PythonOperator task
 validation_task = PythonOperator(
     task_id='run_ge_check',
     python_callable=validate_iceberg_table,
