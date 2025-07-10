@@ -51,4 +51,10 @@ def validate_iceberg_table():
         print("✅ All data quality checks passed.")
 
 # Define PythonOperator
-valida
+validation_task = PythonOperator(
+    task_id='run_ge_check',
+    python_callable=validate_iceberg_table,
+    dag=dag
+)
+
+validation_task
