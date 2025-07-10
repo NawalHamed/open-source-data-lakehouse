@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir \
     Pillow \
     faker \
     matplotlib
+    great_expectations==1.1.0 \
+    sqlalchemy \
+    trino[sqlalchemy]
 
 # Return to airflow user for security best practices
 USER airflow
