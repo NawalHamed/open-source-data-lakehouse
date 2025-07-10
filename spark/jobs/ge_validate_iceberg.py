@@ -2,9 +2,9 @@
 from pyspark.sql import SparkSession
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.data_context import EphemeralDataContext
+from great_expectations.core.expectation_suite import ExpectationSuite
 
 def validate_iceberg_data():
-    # Step 1: Initialize Spark with Iceberg + Nessie + MinIO config
     spark = SparkSession.builder \
         .appName("GE Iceberg Validation") \
         .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
@@ -20,16 +20,12 @@ def validate_iceberg_data():
         .getOrCreate()
 
     try:
-        # Step 2: Load Iceberg table from Nessie catalog
         df = spark.table("nessie.silver_layer.flight_data")
-
-        # Step 3: Print schema and row count to confirm table loaded
         print("=== Schema ===")
         df.printSchema()
         print("=== Row Count ===")
         print(df.count())
 
-        # Step 4: Create Ephemeral GE DataContext with correct Spark config
         context = EphemeralDataContext(project_config={
             "config_version": 3.0,
             "datasources": {
@@ -49,33 +45,26 @@ def validate_iceberg_data():
                     }
                 }
             },
-            "expectations_store_name": "expectations_store",
-            "validation_results_store_name": "validation_results_store",
             "stores": {
                 "expectations_store": {
                     "class_name": "ExpectationsStore",
                     "module_name": "great_expectations.data_context.store",
-                    "store_backend": {
-                        "class_name": "InMemoryStoreBackend"
-                    }
+                    "store_backend": {"class_name": "InMemoryStoreBackend"}
                 },
                 "validation_results_store": {
                     "class_name": "ValidationResultsStore",
                     "module_name": "great_expectations.data_context.store",
-                    "store_backend": {
-                        "class_name": "InMemoryStoreBackend"
-                    }
+                    "store_backend": {"class_name": "InMemoryStoreBackend"}
                 }
             },
-            "anonymous_usage_statistics": {
-                "enabled": False
-            }
+            "expectations_store_name": "expectations_store",
+            "validation_results_store_name": "validation_results_store",
+            "anonymous_usage_statistics": {"enabled": False}
         })
 
-        # Step 5: Add expectation suite to context
-        context.add_expectation_suite("flight_data_expectations")
+        # ✅ Create suite inline
+        suite = ExpectationSuite(expectation_suite_name="flight_data_expectations")
 
-        # Step 6: Build RuntimeBatchRequest for in-memory Spark DataFrame
         batch_request = RuntimeBatchRequest(
             datasource_name="spark_datasource",
             data_connector_name="default_runtime_data_connector",
@@ -84,19 +73,16 @@ def validate_iceberg_data():
             batch_identifiers={"run_id": "flight_validation_1"}
         )
 
-        # Step 7: Get validator using expectation suite name
         validator = context.get_validator(
             batch_request=batch_request,
-            expectation_suite_name="flight_data_expectations"
+            expectation_suite=suite
         )
 
-        # Step 8: Define expectations
         validator.expect_column_values_to_not_be_null("flight_id")
         validator.expect_column_values_to_be_in_set(
             "status", ["scheduled", "departed", "landed", "delayed", "cancelled"]
         )
 
-        # Step 9: Run validation and return results
         results = validator.validate()
 
         print("✅ Validation Complete")
@@ -110,7 +96,7 @@ def validate_iceberg_data():
         print("🧹 Stopping Spark...")
         spark.stop()
 
-# Run the validation
+
 if __name__ == "__main__":
     validation_results = validate_iceberg_data()
     print("📊 Validation Results:")
