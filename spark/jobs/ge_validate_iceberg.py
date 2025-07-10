@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
 from pyspark.sql import SparkSession
-from great_expectations.data_context import EphemeralDataContext
+from great_expectations import get_context
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.core.expectation_suite import ExpectationSuite
+from great_expectations.data_context.types.base import (
+    DataContextConfig,
+    InMemoryStoreBackendDefaults,
+    DatasourceConfig,
+    DataConnectorConfig,
+    SparkDFExecutionEngineConfig
+)
+
+import great_expectations as ge
+print("GE Version:", ge.__version__)
+print("Spark Version:", spark.version)
 
 
 def validate_iceberg_data():
@@ -31,52 +42,34 @@ def validate_iceberg_data():
         print("=== Row Count ===")
         print(df.count())
 
-        # Step 3: Create Ephemeral GE context with proper datasource configuration
-        context = EphemeralDataContext(project_config={
-            "config_version": 3.0,
-            "datasources": {
-                "spark_datasource": {  # Changed to match GE 1.x naming convention
-                    "class_name": "Datasource",
-                    "execution_engine": {
-                        "class_name": "SparkDFExecutionEngine",
-                        "force_reuse_spark_context": True,
-                    },
-                    "data_connectors": {
-                        "default_runtime_data_connector": {
-                            "class_name": "RuntimeDataConnector",
-                            "batch_identifiers": ["run_id"]
-                        }
+        # Step 3: Create GE context with proper configuration
+        store_backend_defaults = InMemoryStoreBackendDefaults()
+        data_context_config = DataContextConfig(
+            store_backend_defaults=store_backend_defaults,
+            datasources={
+                "spark_datasource": DatasourceConfig(
+                    class_name="Datasource",
+                    execution_engine=SparkDFExecutionEngineConfig(force_reuse_spark_context=True),
+                    data_connectors={
+                        "default_runtime_data_connector": DataConnectorConfig(
+                            class_name="RuntimeDataConnector",
+                            batch_identifiers=["run_id"]
+                        )
                     }
-                }
+                )
             },
-            "stores": {
-                "expectations_store": {
-                    "class_name": "ExpectationsStore",
-                    "store_backend": {"class_name": "InMemoryStoreBackend"}
-                },
-                "validation_results_store": {
-                    "class_name": "ValidationResultsStore",
-                    "store_backend": {"class_name": "InMemoryStoreBackend"}
-                }
-            },
-            "expectations_store_name": "expectations_store",
-            "validation_results_store_name": "validation_results_store",
-            "anonymous_usage_statistics": {"enabled": False}
-        })
+            anonymous_usage_statistics={"enabled": False}
+        )
+        
+        context = get_context(project_config=data_context_config)
 
-        # Debug: Verify datasource is properly registered (GE 1.x compatible)
+        # Verify datasource is properly registered
         print("✅ Datasources in context:", context.list_datasources())
         
-        # Get datasource in GE 1.x compatible way
-        datasource = context.get_datasource("spark_datasource")
-        print("✅ Successfully accessed datasource:", datasource.name)
-        print("✅ Available data connectors:", 
-              [connector_name for connector_name in datasource.data_connectors.keys()])
+        # Step 4: Define expectation suite
+        suite = context.create_expectation_suite("flight_data_expectations", overwrite_existing=True)
 
-        # Step 4: Define expectation suite in memory
-        suite = ExpectationSuite(name="flight_data_expectations")
-
-        # Step 5: Build batch request from Spark DataFrame
+        # Step 5: Build batch request
         batch_request = RuntimeBatchRequest(
             datasource_name="spark_datasource",
             data_connector_name="default_runtime_data_connector",
@@ -85,13 +78,12 @@ def validate_iceberg_data():
             batch_identifiers={"run_id": "flight_validation_1"}
         )
 
-        # Step 6: Get validator and run expectations
+        # Step 6: Get validator and add expectations
         validator = context.get_validator(
             batch_request=batch_request,
             expectation_suite=suite
         )
 
-        # Add expectations
         validator.expect_column_values_to_not_be_null("flight_id")
         validator.expect_column_values_to_be_in_set(
             "status", ["scheduled", "departed", "landed", "delayed", "cancelled"]
@@ -100,7 +92,7 @@ def validate_iceberg_data():
         # Step 7: Run validation
         results = validator.validate()
 
-        # Step 8: Return or log results
+        # Step 8: Return results
         print("✅ Validation Complete")
         return {
             "success": results.success,
@@ -114,7 +106,6 @@ def validate_iceberg_data():
     finally:
         print("🧹 Stopping Spark...")
         spark.stop()
-
 
 if __name__ == "__main__":
     validation_results = validate_iceberg_data()
