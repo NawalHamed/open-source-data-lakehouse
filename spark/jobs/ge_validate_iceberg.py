@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 from pyspark.sql import SparkSession
-from great_expectations.data_context import EphemeralDataContext
+from great_expectations.data_context import DataContext
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.core.expectation_suite import ExpectationSuite
 
-
 def validate_iceberg_data():
-    # Step 1: Initialize Spark with Iceberg + Nessie + MinIO
+    # Step 1: Start Spark session
     spark = SparkSession.builder \
         .appName("GE Iceberg Validation") \
         .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
@@ -22,17 +21,15 @@ def validate_iceberg_data():
         .getOrCreate()
 
     try:
-        # Step 2: Load Iceberg table as Spark DataFrame
+        # Step 2: Read Iceberg table
         df = spark.table("nessie.silver_layer.flight_data")
-
-        # Debug: Print schema and row count
-        print("=== Schema ===")
+        print("✅ Spark DataFrame loaded")
+        print("Schema:")
         df.printSchema()
-        print("=== Row Count ===")
-        print(df.count())
+        print("Row count:", df.count())
 
-        # Step 3: Create Ephemeral GE context
-        context = EphemeralDataContext(project_config={
+        # Step 3: Build in-memory Great Expectations config
+        config = {
             "config_version": 3.0,
             "datasources": {
                 "spark_datasource": {
@@ -43,7 +40,7 @@ def validate_iceberg_data():
                         "module_name": "great_expectations.execution_engine"
                     },
                     "data_connectors": {
-                        "default_runtime_data_connector": {
+                        "runtime_connector": {
                             "class_name": "RuntimeDataConnector",
                             "module_name": "great_expectations.datasource.data_connector",
                             "batch_identifiers": ["run_id"]
@@ -66,43 +63,43 @@ def validate_iceberg_data():
             "expectations_store_name": "expectations_store",
             "validation_results_store_name": "validation_results_store",
             "anonymous_usage_statistics": {"enabled": False}
-        })
+        }
 
-        # Optional debug: Check datasource was registered
-        print("✅ Datasources in context:", context.list_datasources())
+        # Step 4: Initialize context from dict
+        context = DataContext.from_dict(config)
 
-        # Step 4: Define expectation suite in memory
+        # Step 5: Define suite
         suite = ExpectationSuite(name="flight_data_expectations")
 
-        # Step 5: Build batch request from Spark DataFrame
+        # Step 6: Build batch request
         batch_request = RuntimeBatchRequest(
-            datasource_name="spark_datasource",  # must match context
-            data_connector_name="default_runtime_data_connector",
-            data_asset_name="flight_data_asset",  # any name you choose
+            datasource_name="spark_datasource",
+            data_connector_name="runtime_connector",
+            data_asset_name="flight_data_asset",
             runtime_parameters={"batch_data": df},
-            batch_identifiers={"run_id": "flight_validation_1"}
+            batch_identifiers={"run_id": "run_001"}
         )
 
-        # Step 6: Get validator and run expectations
+        # Step 7: Get validator
         validator = context.get_validator(
             batch_request=batch_request,
             expectation_suite=suite
         )
 
+        # Step 8: Add expectations
         validator.expect_column_values_to_not_be_null("flight_id")
         validator.expect_column_values_to_be_in_set(
             "status", ["scheduled", "departed", "landed", "delayed", "cancelled"]
         )
 
-        # Step 7: Run validation
-        results = validator.validate()
+        # Step 9: Validate
+        result = validator.validate()
 
-        # Step 8: Return or log results
-        print("✅ Validation Complete")
+        print("✅ GE validation finished")
         return {
-            "success": results.success,
-            "statistics": results.statistics,
-            "results": [str(result) for result in results.results]
+            "success": result.success,
+            "statistics": result.statistics,
+            "results": [str(r) for r in result.results]
         }
 
     finally:
@@ -112,6 +109,6 @@ def validate_iceberg_data():
 
 # Entry point
 if __name__ == "__main__":
-    validation_results = validate_iceberg_data()
+    result = validate_iceberg_data()
     print("📊 Validation Results:")
-    print(validation_results)
+    print(result)
