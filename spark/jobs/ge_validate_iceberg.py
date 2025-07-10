@@ -1,43 +1,34 @@
-from pyspark.sql import SparkSession
-from great_expectations.dataset import SparkDFDataset
+import pandas as pd
+import great_expectations as ge
+from sqlalchemy.engine import create_engine
 
-def validate_dummy_data():
-    # Step 1: Initialize Spark
-    spark = SparkSession.builder \
-        .appName("GE Dummy Data Validation") \
-        .master("spark://spark-master:7077") \
-        .getOrCreate()
+# Step 1: Connect to Trino (Make sure Trino is running and Iceberg is configured)
+TRINO_HOST = "trino"  # Docker service name or IP
+TRINO_PORT = 8080
+CATALOG = "iceberg"  # This is the Nessie Iceberg catalog in Trino
+SCHEMA = "gold_layer"
+TABLE = "flight_performance_summary_v1"
 
-    # Step 2: Create Dummy DataFrame
-    data = [
-        ("John", 28, "john@example.com"),
-        ("Alice", 34, "alice@example.com"),
-        ("Bob", None, "bob@example.com"),
-        ("Charlie", 45, None),
-        ("David", 29, "david@example.com")
-    ]
-    columns = ["name", "age", "email"]
+engine = create_engine(
+    f'trino://user@{TRINO_HOST}:{TRINO_PORT}/{CATALOG}/{SCHEMA}'
+)
 
-    df = spark.createDataFrame(data, columns)
+# Step 2: Query the Iceberg table via Trino
+query = f"SELECT * FROM {TABLE} LIMIT 100"
+df = pd.read_sql(query, engine)
 
-    # Step 3: Wrap with Great Expectations SparkDFDataset
-    ge_df = SparkDFDataset(df)
+# Step 3: Convert to GE DataFrame
+ge_df = ge.from_pandas(df)
 
-    # Step 4: Define Expectations
-    ge_df.expect_column_to_exist("email")
-    ge_df.expect_column_values_to_not_be_null("name")
-    ge_df.expect_column_values_to_be_between("age", min_value=18, max_value=60)
-    ge_df.expect_column_values_to_match_regex("email", r"^[^@]+@[^@]+\.[^@]+$", mostly=0.9)
+# Step 4: Define Expectations
+ge_df.expect_column_to_exist("flight_number")
+ge_df.expect_column_values_to_not_be_null("flight_date")
+ge_df.expect_column_values_to_be_between("distance_km", min_value=0, max_value=20000)
+ge_df.expect_column_values_to_match_regex("flight_number", r"^[A-Z]{2}\d{3,4}$", mostly=0.9)
 
-    # Step 5: Validate and Collect Results
-    validation_results = ge_df.validate()
+# Step 5: Validate
+results = ge_df.validate()
 
-    # Step 6: Print the Results
-    import json
-    print(json.dumps(validation_results, indent=2))
-
-    # Stop Spark
-    spark.stop()
-
-if __name__ == "__main__":
-    validate_dummy_data()
+# Step 6: Print Results
+import json
+print(json.dumps(results, indent=2))
