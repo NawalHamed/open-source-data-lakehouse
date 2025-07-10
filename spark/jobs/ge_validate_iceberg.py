@@ -68,7 +68,7 @@ def validate_iceberg_data():
             "anonymous_usage_statistics": {"enabled": False}
         })
 
-        print("✅ GE Datasource loaded:", context.datasources)
+       # print("✅ GE Datasource loaded:", context.datasources)
 
         # Step 5: Create expectation suite
         suite = ExpectationSuite(name="flight_data_expectations")
