@@ -31,8 +31,8 @@ def run_ge_validation():
 
     # Step 2: Minimal GE project config
     config = DataContextConfig(
-        store_backend_defaults=FilesystemStoreBackendDefaults(root_directory="/tmp/ge"),
         config_version=3.0,
+        datasources={},
         stores={
             "expectations_store": {
                 "class_name": "ExpectationsStore",
@@ -53,8 +53,9 @@ def run_ge_validation():
             }
         },
         expectations_store_name="expectations_store",
-        validations_store_name="validations_store",
         evaluation_parameter_store_name="evaluation_parameter_store",
+        validations_store_name="validations_store",  # Moved to root level
+        store_backend_defaults=FilesystemStoreBackendDefaults(root_directory="/tmp/ge"),
         data_docs_sites={},
     )
 
