@@ -16,16 +16,13 @@ def run_gx_on_dataframe():
     })
     print(df)
 
-    print("🔵 Initializing Great Expectations context (ephemeral)...")
+    print("🔵 Initializing Ephemeral Great Expectations context...")
     context = gx.get_context(mode="ephemeral")
 
-    print("📘 Creating expectation suite...")
-    suite = context.create_expectation_suite(
-        expectation_suite_name="demo_suite",
-        overwrite_existing=True
-    )
+    print("📘 Manually creating an expectation suite object...")
+    suite = ExpectationSuite(expectation_suite_name="demo_suite")
 
-    print("🔎 Creating validator with PandasExecutionEngine...")
+    print("🔎 Creating validator with PandasExecutionEngine and in-memory suite...")
     validator = Validator(
         execution_engine=PandasExecutionEngine(),
         data=df,
@@ -36,9 +33,6 @@ def run_gx_on_dataframe():
     validator.expect_column_values_to_not_be_null("name")
     validator.expect_column_values_to_be_unique("email")
     validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
-
-    print("💾 Saving expectation suite...")
-    validator.save_expectation_suite()
 
     print("🚦 Running validation...")
     results = validator.validate()
@@ -53,18 +47,17 @@ def run_gx_on_dataframe():
     if not results.success:
         raise Exception("❌ Data validation failed.")
 
-# Default args for Airflow
+# Airflow DAG setup
 default_args = {
     'start_date': datetime(2025, 7, 15),
     'catchup': False
 }
 
-# Define the DAG
 with DAG(
     dag_id='gx_dataframe_validation_dag',
     default_args=default_args,
     schedule_interval=None,
-    description='Run Great Expectations on a Pandas DataFrame using Ephemeral Context',
+    description='Run GE v1.1.0 on a Pandas DataFrame with EphemeralContext',
     tags=['gx', 'pandas', 'validation']
 ) as dag:
 
