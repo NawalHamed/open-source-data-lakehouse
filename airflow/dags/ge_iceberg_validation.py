@@ -3,9 +3,10 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import pandas as pd
 import great_expectations as gx
+from great_expectations.core.expectation_suite import ExpectationSuite
 
 def run_gx_on_dataframe():
-    # 1️⃣ Sample Data
+    # Step 1: Create DataFrame
     df = pd.DataFrame({
         "name": ["Ali", "Sara", "John", "Ali"],
         "age": [25, 30, 22, 25],
@@ -13,39 +14,35 @@ def run_gx_on_dataframe():
     })
     print("📦 DataFrame:\n", df)
 
-    # 2️⃣ Ephemeral GE Context
+    # Step 2: Ephemeral context
     context = gx.get_context(mode="ephemeral")
 
-    # 3️⃣ Create Expectation Suite
-    suite_name = "demo_suite"
-    context.add_or_update_expectation_suite(expectation_suite_name=suite_name)
+    # Step 3: Create ExpectationSuite object (no context method)
+    suite = ExpectationSuite("demo_suite")
 
-    # 4️⃣ Get Validator (this handles batch creation internally)
+    # Step 4: Get validator directly using DataFrame + suite
     validator = context.get_validator(
         batch_data=df,
-        expectation_suite_name=suite_name
+        expectation_suite=suite
     )
 
-    # 5️⃣ Add Expectations
+    # Step 5: Define expectations
     validator.expect_column_values_to_not_be_null("name")
     validator.expect_column_values_to_be_unique("email")
     validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
 
-    # 6️⃣ Save suite (in-memory)
-    validator.save_expectation_suite(discard_failed_expectations=False)
-
-    # 7️⃣ Run validation
+    # Step 6: Validate
     results = validator.validate()
 
-    # 8️⃣ Print result summary
-    print("✅ Validation Success:", results.success)
+    # Step 7: Output
+    print("✅ Validation success:", results.success)
     for res in results.results:
-        col = res.expectation_config.kwargs.get("column", "-")
         exp = res.expectation_config.expectation_type
-        print(f"  → {exp} on '{col}':", "PASSED ✅" if res.success else "FAILED ❌")
+        col = res.expectation_config.kwargs.get("column", "-")
+        print(f"  → {exp} on '{col}': {'PASSED ✅' if res.success else 'FAILED ❌'}")
 
     if not results.success:
-        raise Exception("❌ Data validation failed.")
+        raise Exception("❌ Validation failed!")
 
 # ─────────────────────────────────────────────────────────────
 default_args = {"start_date": datetime(2025, 7, 15), "catchup": False}
@@ -55,7 +52,7 @@ with DAG(
     default_args=default_args,
     schedule_interval=None,
     tags=["gx", "pandas", "validation"],
-    description="Validate DataFrame with GE 1.1.0 in Airflow using Ephemeral Context"
+    description="Validate DataFrame using GE 1.1.0 in Airflow with EphemeralContext"
 ) as dag:
 
     validate_task = PythonOperator(
