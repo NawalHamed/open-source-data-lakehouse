@@ -1,133 +1,84 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
-import great_expectations as ge
-from great_expectations.data_context.types.base import (
-    DataContextConfig,
-    FilesystemStoreBackendDefaults
-)
-from great_expectations.data_context import EphemeralDataContext
-from great_expectations.core.batch import RuntimeBatchRequest
+import great_expectations as gx
+
+def run_gx_on_dataframe():
+    print("🔵 Creating sample DataFrame...")
+    df = pd.DataFrame({
+        "name": ["Ali", "Sara", "John", "Ali"],
+        "age": [25, 30, 22, 25],
+        "email": ["ali@example.com", "sara@example.com", "john@example.com", "ali@example.com"]
+    })
+    print(df)
+
+    print("🔵 Initializing Great Expectations Ephemeral Context...")
+    context = gx.get_context(mode="ephemeral")
+
+    print("🔵 Adding Pandas DataFrame as a datasource...")
+    datasource = context.sources.add_pandas(name="my_pandas_datasource")
+
+    print("🔵 Creating a data asset from the dataframe...")
+    data_asset = datasource.add_dataframe_asset(name="sample_df", dataframe=df)
+
+    print("🔵 Building batch request...")
+    batch_request = data_asset.build_batch_request()
+
+    print("🔵 Creating expectation suite...")
+    suite = context.add_or_update_expectation_suite("demo_suite")
+
+    print("🔵 Getting validator and applying expectations...")
+    validator = context.get_validator(batch_request=batch_request, expectation_suite=suite)
+
+    validator.expect_column_values_to_not_be_null("name")
+    validator.expect_column_values_to_be_unique("email")
+    validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
+
+    print("✅ Expectations applied:")
+    for exp in validator.get_expectation_suite().expectations:
+        print(f"  - {exp.expectation_type} on {exp.kwargs}")
+
+    print("💾 Saving expectation suite...")
+    validator.save_expectation_suite(discard_failed_expectations=False)
+
+    print("🚦 Running checkpoint...")
+    checkpoint_result = context.run_checkpoint(
+        name="demo_checkpoint",
+        validations=[{
+            "batch_request": batch_request,
+            "expectation_suite_name": suite.name,
+        }]
+    )
+
+    success = checkpoint_result["success"]
+    print("✅ Checkpoint result: ", "PASSED" if success else "FAILED")
+    print("🔍 Full Validation Results Summary:")
+    for res in checkpoint_result["run_results"].values():
+        for vres in res["validation_result"]["results"]:
+            col = vres["expectation_config"]["kwargs"].get("column")
+            passed = vres["success"]
+            print(f"  - Column: {col} | Passed: {passed} | Expectation: {vres['expectation_config']['expectation_type']}")
+
+    if not success:
+        raise Exception("❌ Data validation failed. Check expectations.")
 
 default_args = {
-    'owner': 'airflow',
-    'start_date': datetime(2025, 7, 1),
-    'retries': 1,
-    'retry_delay': timedelta(minutes=1),
+    'start_date': datetime(2025, 7, 15),
+    'catchup': False
 }
 
-dag = DAG(
-    'ge_dummy_df_validation',
+with DAG(
+    dag_id='gx_dataframe_validation_dag',
     default_args=default_args,
     schedule_interval=None,
-    catchup=False,
-)
+    description='Run Great Expectations on a Pandas DataFrame using Ephemeral Context',
+    tags=['gx', 'pandas', 'validation']
+) as dag:
 
-def run_ge_validation():
-    try:
-        # Step 1: Create dummy DataFrame
-        df = pd.DataFrame({
-            "name": ["Alice", "Bob", "Charlie", "David"],
-            "age": [25, 32, 45, 29],
-            "salary": [50000, 60000, 80000, 70000]
-        })
+    validate_data = PythonOperator(
+        task_id='run_gx_validation',
+        python_callable=run_gx_on_dataframe
+    )
 
-        # Step 2: Minimal GE project config
-        config = DataContextConfig(
-            config_version=3.0,
-            stores={
-                "expectations_store": {
-                    "class_name": "ExpectationsStore",
-                    "store_backend": {
-                        "class_name": "TupleFilesystemStoreBackend",
-                        "base_directory": "/tmp/ge/expectations"
-                    }
-                },
-                "validations_store": {
-                    "class_name": "ValidationsStore",
-                    "store_backend": {
-                        "class_name": "TupleFilesystemStoreBackend",
-                        "base_directory": "/tmp/ge/validations"
-                    }
-                },
-                "evaluation_parameter_store": {
-                    "class_name": "EvaluationParameterStore"
-                }
-            },
-            expectations_store_name="expectations_store",
-            evaluation_parameter_store_name="evaluation_parameter_store",
-            validations_store_name="validations_store",
-            store_backend_defaults=FilesystemStoreBackendDefaults(
-                root_directory="/tmp/ge"
-            ),
-            data_docs_sites={},
-        )
-
-        # Step 3: Create Ephemeral Context from config
-        context = EphemeralDataContext(project_config=config)
-
-        # Step 4: Add datasource programmatically
-        datasource_config = {
-            "name": "my_pandas_datasource",
-            "class_name": "Datasource",
-            "execution_engine": {
-                "class_name": "PandasExecutionEngine"
-            },
-            "data_connectors": {
-                "runtime_data_connector": {
-                    "class_name": "RuntimeDataConnector",
-                    "batch_identifiers": ["default_identifier"]
-                }
-            }
-        }
-        context.add_datasource(**datasource_config)
-
-        # Step 5: Create batch request from DataFrame
-        batch_request = RuntimeBatchRequest(
-            datasource_name="my_pandas_datasource",
-            data_connector_name="runtime_data_connector",
-            data_asset_name="dummy_asset",
-            runtime_parameters={"batch_data": df},
-            batch_identifiers={"default_identifier": "dummy"},
-        )
-
-        # Step 6: Create suite and validator
-        context.create_expectation_suite(
-            "dummy_suite", 
-            overwrite_existing=True
-        )
-        validator = context.get_validator(
-            batch_request=batch_request,
-            expectation_suite_name="dummy_suite"
-        )
-
-        # Step 7: Define expectations
-        validator.expect_column_to_exist("name")
-        validator.expect_column_values_to_not_be_null("age")
-        validator.expect_column_values_to_be_between("age", 18, 65)
-        validator.expect_column_mean_to_be_between("salary", 40000, 90000)
-
-        # Step 8: Validate
-        results = validator.validate()
-        if not results.success:
-            failed_expectations = [
-                exp.expectation_config.expectation_type 
-                for exp in results.results 
-                if not exp.success
-            ]
-            raise ValueError(
-                f"Validation failed for expectations: {failed_expectations}"
-            )
-        print("✅ Great Expectations validation passed!")
-        return "Validation succeeded"
-        
-    except Exception as e:
-        print(f"❌ Validation failed with error: {str(e)}")
-        raise
-
-run_validation_task = PythonOperator(
-    task_id='run_dummy_ge_validation',
-    python_callable=run_ge_validation,
-    dag=dag,
-)
+    validate_data
