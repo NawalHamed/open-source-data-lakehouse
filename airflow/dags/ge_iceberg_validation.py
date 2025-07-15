@@ -3,6 +3,9 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import pandas as pd
 import great_expectations as gx
+from great_expectations.validator.validator import Validator
+from great_expectations.core.expectation_suite import ExpectationSuite
+from great_expectations.execution_engine import PandasExecutionEngine
 
 def run_gx_on_dataframe():
     print("🔵 Creating sample DataFrame...")
@@ -13,61 +16,50 @@ def run_gx_on_dataframe():
     })
     print(df)
 
-    print("🔵 Initializing Great Expectations Ephemeral Context...")
+    print("🔵 Initializing Great Expectations context (ephemeral)...")
     context = gx.get_context(mode="ephemeral")
 
-    print("🔵 Adding Pandas DataFrame as a datasource...")
-    datasource = context.sources.add_pandas(name="my_pandas_datasource")
+    print("📘 Creating expectation suite...")
+    suite = context.create_expectation_suite(
+        expectation_suite_name="demo_suite",
+        overwrite_existing=True
+    )
 
-    print("🔵 Creating a data asset from the dataframe...")
-    data_asset = datasource.add_dataframe_asset(name="sample_df", dataframe=df)
+    print("🔎 Creating validator with PandasExecutionEngine...")
+    validator = Validator(
+        execution_engine=PandasExecutionEngine(),
+        data=df,
+        expectation_suite=suite
+    )
 
-    print("🔵 Building batch request...")
-    batch_request = data_asset.build_batch_request()
-
-    print("🔵 Creating expectation suite...")
-    suite = context.add_or_update_expectation_suite("demo_suite")
-
-    print("🔵 Getting validator and applying expectations...")
-    validator = context.get_validator(batch_request=batch_request, expectation_suite=suite)
-
+    print("🧪 Applying expectations...")
     validator.expect_column_values_to_not_be_null("name")
     validator.expect_column_values_to_be_unique("email")
     validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
 
-    print("✅ Expectations applied:")
-    for exp in validator.get_expectation_suite().expectations:
-        print(f"  - {exp.expectation_type} on {exp.kwargs}")
-
     print("💾 Saving expectation suite...")
-    validator.save_expectation_suite(discard_failed_expectations=False)
+    validator.save_expectation_suite()
 
-    print("🚦 Running checkpoint...")
-    checkpoint_result = context.run_checkpoint(
-        name="demo_checkpoint",
-        validations=[{
-            "batch_request": batch_request,
-            "expectation_suite_name": suite.name,
-        }]
-    )
+    print("🚦 Running validation...")
+    results = validator.validate()
 
-    success = checkpoint_result["success"]
-    print("✅ Checkpoint result: ", "PASSED" if success else "FAILED")
-    print("🔍 Full Validation Results Summary:")
-    for res in checkpoint_result["run_results"].values():
-        for vres in res["validation_result"]["results"]:
-            col = vres["expectation_config"]["kwargs"].get("column")
-            passed = vres["success"]
-            print(f"  - Column: {col} | Passed: {passed} | Expectation: {vres['expectation_config']['expectation_type']}")
+    print("✅ Validation success:", results.success)
+    print("🔍 Detailed Results:")
+    for r in results.results:
+        expectation = r.expectation_config.expectation_type
+        column = r.expectation_config.kwargs.get("column", "N/A")
+        print(f"  - Expectation: {expectation}, Column: {column}, Passed: {r.success}")
 
-    if not success:
-        raise Exception("❌ Data validation failed. Check expectations.")
+    if not results.success:
+        raise Exception("❌ Data validation failed.")
 
+# Default args for Airflow
 default_args = {
     'start_date': datetime(2025, 7, 15),
     'catchup': False
 }
 
+# Define the DAG
 with DAG(
     dag_id='gx_dataframe_validation_dag',
     default_args=default_args,
@@ -76,9 +68,9 @@ with DAG(
     tags=['gx', 'pandas', 'validation']
 ) as dag:
 
-    validate_data = PythonOperator(
+    validate_task = PythonOperator(
         task_id='run_gx_validation',
         python_callable=run_gx_on_dataframe
     )
 
-    validate_data
+    validate_task
