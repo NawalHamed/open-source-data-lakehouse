@@ -3,72 +3,84 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import pandas as pd
 import great_expectations as gx
+from great_expectations.core.batch import Batch, BatchRequest, RuntimeBatchRequest
+from great_expectations.validator.validator import Validator
+from great_expectations.core.expectation_suite import ExpectationSuite
+from great_expectations.execution_engine import PandasExecutionEngine
+from great_expectations.core.batch import BatchMarkers, BatchSpec
 
 def run_gx_on_dataframe():
-    # 1️⃣  Sample Data
-    df = pd.DataFrame(
-        {
-            "name":  ["Ali", "Sara", "John", "Ali"],
-            "age":   [25, 30, 22, 25],
-            "email": ["ali@example.com",
-                      "sara@example.com",
-                      "john@example.com",
-                      "ali@example.com"],
-        }
-    )
-    print("🔵 DataFrame to validate:\n", df)
+    print("🔵 Creating sample DataFrame...")
+    df = pd.DataFrame({
+        "name": ["Ali", "Sara", "John", "Ali"],
+        "age": [25, 30, 22, 25],
+        "email": ["ali@example.com", "sara@example.com", "john@example.com", "ali@example.com"]
+    })
+    print(df)
 
-    # 2️⃣  Ephemeral GE context
+    print("🔵 Initializing GE Ephemeral Context...")
     context = gx.get_context(mode="ephemeral")
 
-    # 3️⃣  Create / fetch an empty expectation-suite
-    suite_name = "demo_suite"
-    try:
-        context.get_expectation_suite(suite_name)
-    except gx.exceptions.DataContextError:
-        context.add_or_update_expectation_suite(suite_name)
+    print("📘 Creating expectation suite...")
+    suite = ExpectationSuite("demo_suite")
 
-    # 4️⃣  Get a validator *with* an active batch from the in-memory DataFrame
-    validator = context.get_validator(
-        batch_data=df,
-        expectation_suite_name=suite_name,
+    print("🔧 Creating PandasExecutionEngine...")
+    engine = PandasExecutionEngine()
+
+    print("📦 Creating a GE Batch from DataFrame...")
+    batch = Batch(
+        data=df,
+        batch_request=RuntimeBatchRequest(
+            datasource_name="my_datasource",
+            data_connector_name="my_connector",
+            data_asset_name="my_asset"
+        ),
+        batch_markers=BatchMarkers(),
+        batch_spec=BatchSpec({}),
+        execution_engine=engine
     )
 
-    # 5️⃣  Add expectations
+    print("🔎 Creating validator...")
+    validator = Validator(
+        execution_engine=engine,
+        batches=[batch],
+        expectation_suite=suite
+    )
+
+    print("🧪 Applying expectations...")
     validator.expect_column_values_to_not_be_null("name")
     validator.expect_column_values_to_be_unique("email")
     validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
 
-    # 6️⃣  Persist the suite (still in-memory in an EphemeralContext)
-    validator.save_expectation_suite(discard_failed_expectations=False)
-
-    # 7️⃣  Validate and print a concise summary
+    print("🚦 Validating...")
     results = validator.validate()
-    print("✅ Validation overall success:", results.success)
-    for res in results.results:
-        etype = res.expectation_config.expectation_type
-        col   = res.expectation_config.kwargs.get("column", "-")
-        print(
-            f"  • {etype} on '{col}' ⇒ ",
-            "PASSED" if res.success else "FAILED",
-        )
 
-    # 8️⃣  Fail the task if any expectation failed
+    print("✅ Validation success:", results.success)
+    for r in results.results:
+        exp = r.expectation_config.expectation_type
+        col = r.expectation_config.kwargs.get("column", "N/A")
+        print(f"  - Expectation: {exp}, Column: {col}, Passed: {r.success}")
+
     if not results.success:
-        raise Exception("❌ Data quality check failed – see log for details")
+        raise Exception("❌ Data validation failed.")
 
-# ────────────────────────────────────────────────────────────────────────────────
-default_args = {"start_date": datetime(2025, 7, 15), "catchup": False}
+# Airflow DAG setup
+default_args = {
+    'start_date': datetime(2025, 7, 15),
+    'catchup': False
+}
 
 with DAG(
-    dag_id="gx_dataframe_validation_dag",
+    dag_id='gx_dataframe_validation_dag',
     default_args=default_args,
     schedule_interval=None,
-    description="Validate a Pandas DataFrame with Great Expectations 1.1.x",
-    tags=["gx", "pandas", "validation"],
+    description='GE v1.1.0 validation on DataFrame with Ephemeral context and batch',
+    tags=['gx', 'pandas', 'validation']
 ) as dag:
 
-    PythonOperator(
-        task_id="run_gx_validation",
-        python_callable=run_gx_on_dataframe,
+    validate_task = PythonOperator(
+        task_id='run_gx_validation',
+        python_callable=run_gx_on_dataframe
     )
+
+    validate_task
