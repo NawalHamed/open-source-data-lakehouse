@@ -20,7 +20,7 @@ def run_gx_on_dataframe():
     context = gx.get_context(mode="ephemeral")
 
     print("📘 Manually creating an expectation suite object...")
-    suite = ExpectationSuite(expectation_suite_name="demo_suite")
+    suite = ExpectationSuite("demo_suite")
 
     print("🔎 Creating validator with PandasExecutionEngine and in-memory suite...")
     validator = Validator(
