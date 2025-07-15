@@ -13,20 +13,20 @@ def run_gx_on_dataframe():
     })
     print("📦 DataFrame:\n", df)
 
-    # Step 2: Ephemeral GE Context
+    # Step 2: Initialize Ephemeral GE Context
     context = gx.get_context(mode="ephemeral")
 
-    # Step 3: Create and register suite in context
+    # Step 3: Create and register suite correctly
     suite_name = "demo_suite"
-    context._expectation_suites[suite_name] = gx.core.ExpectationSuite(suite_name)
+    context.create_expectation_suite(suite_name, overwrite_existing=True)
 
-    # Step 4: Get validator with batch_data
+    # Step 4: Get validator using batch_data and suite name
     validator = context.get_validator(
         batch_data=df,
         expectation_suite_name=suite_name
     )
 
-    # Step 5: Apply expectations
+    # Step 5: Add expectations
     validator.expect_column_values_to_not_be_null("name")
     validator.expect_column_values_to_be_unique("email")
     validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
@@ -34,7 +34,7 @@ def run_gx_on_dataframe():
     # Step 6: Validate
     results = validator.validate()
 
-    # Step 7: Print result
+    # Step 7: Print results
     print("✅ Validation Success:", results.success)
     for r in results.results:
         col = r.expectation_config.kwargs.get("column", "-")
@@ -42,7 +42,7 @@ def run_gx_on_dataframe():
         print(f"  → {exp} on '{col}': {'✅ PASSED' if r.success else '❌ FAILED'}")
 
     if not results.success:
-        raise Exception("❌ Data validation failed!")
+        raise Exception("❌ One or more expectations failed.")
 
 # ─────────────────────────────────────────────────────────────
 default_args = {"start_date": datetime(2025, 7, 15), "catchup": False}
