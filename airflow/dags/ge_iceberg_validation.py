@@ -1,63 +1,72 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+# from airflow.exceptions import AirflowException # No longer needed if not raising exceptions
 from datetime import datetime
+
 import pandas as pd
 import great_expectations as gx
 
-def run_gx_on_dataframe():
-    # Step 1: Create DataFrame
+def run_great_expectations_validation():
+    """
+    This function encapsulates the Great Expectations validation logic.
+    It creates a dummy DataFrame, defines expectations, and runs the validation.
+    It will print the validation results but will NOT raise an AirflowException
+    even if validation fails, ensuring the Airflow task always succeeds.
+    """
+    # Create sample DataFrame
     df = pd.DataFrame({
-        "name": ["Ali", "Sara", "John", "Ali"],
-        "age": [25, 30, 22, 25],
-        "email": ["ali@example.com", "sara@example.com", "john@example.com", "ali@example.com"]
+        "passenger_id": [1, 2, 3, 4],
+        "passenger_count": [1, 3, 2, 7],
+        "trip_distance_km": [5.2, 3.8, 7.1, 1.4]
     })
-    print("📦 DataFrame:\n", df)
 
-    # Step 2: Initialize Ephemeral GE Context
-    context = gx.get_context(mode="ephemeral")
+    # Initialize Great Expectations Validator from Pandas DataFrame
+    validator = gx.from_pandas(df)
 
-    # Step 3: Create and register suite correctly
-    suite_name = "demo_suite"
-    context.create_expectation_suite(suite_name, overwrite_existing=True)
+    # Add expectations
+    print("Adding Great Expectations...")
+    # Expect 'passenger_count' values to be between 1 and 6 (inclusive)
+    validator.expect_column_values_to_be_between("passenger_count", min_value=1, max_value=6)
+    # Expect 'trip_distance_km' column to not contain any null values
+    validator.expect_column_values_to_not_be_null("trip_distance_km")
 
-    # Step 4: Get validator using batch_data and suite name
-    validator = context.get_validator(
-        batch_data=df,
-        expectation_suite_name=suite_name
-    )
-
-    # Step 5: Add expectations
-    validator.expect_column_values_to_not_be_null("name")
-    validator.expect_column_values_to_be_unique("email")
-    validator.expect_column_values_to_be_between("age", min_value=20, max_value=40)
-
-    # Step 6: Validate
+    # Run validation
+    print("Running Great Expectations validation...")
     results = validator.validate()
 
-    # Step 7: Print results
-    print("✅ Validation Success:", results.success)
-    for r in results.results:
-        col = r.expectation_config.kwargs.get("column", "-")
-        exp = r.expectation_config.expectation_type
-        print(f"  → {exp} on '{col}': {'✅ PASSED' if r.success else '❌ FAILED'}")
+    # Print validation results summary
+    print("\nGreat Expectations Validation Results:")
+    print(f"Success: {results.success}")
 
     if not results.success:
-        raise Exception("❌ One or more expectations failed.")
+        print("\nDetailed Failures:")
+        for result in results.results:
+            if not result.success:
+                print(f"- Expectation: {result.expectation_config.expectation_type}")
+                print(f"  Column: {result.expectation_config.kwargs.get('column')}")
+                print(f"  Details: {result.result}")
+        print("\nGreat Expectations validation completed with failures, but task will succeed as requested.")
+    else:
+        print("\nAll Great Expectations passed successfully!")
 
-# ─────────────────────────────────────────────────────────────
-default_args = {"start_date": datetime(2025, 7, 15), "catchup": False}
-
+# Define the Airflow DAG
 with DAG(
-    dag_id="gx_dataframe_validation_dag",
-    default_args=default_args,
+    dag_id='great_expectations_dataframe_validation_always_succeed', # Changed DAG ID to reflect new behavior
+    start_date=datetime(2023, 1, 1),
     schedule_interval=None,
-    tags=["gx", "pandas", "validation"],
-    description="Validate Pandas DataFrame with Great Expectations v1.1.0 and Ephemeral Context"
+    catchup=False,
+    tags=['data_quality', 'great_expectations', 'pandas', 'non_failing'],
+    doc_md="""
+    ### Great Expectations DataFrame Validation DAG (Always Succeed)
+    This DAG demonstrates how to integrate Great Expectations with Apache Airflow
+    to validate a Pandas DataFrame.
+    The `run_great_expectations_validation` task will always complete successfully,
+    even if some Great Expectations are not met. The validation results will be
+    available in the task logs.
+    """
 ) as dag:
-
-    validate_task = PythonOperator(
-        task_id="run_gx_validation",
-        python_callable=run_gx_on_dataframe
+    # Define the PythonOperator task
+    validate_dataframe_task = PythonOperator(
+        task_id='validate_dummy_dataframe_non_failing', # Changed task ID
+        python_callable=run_great_expectations_validation,
     )
-
-    validate_task
