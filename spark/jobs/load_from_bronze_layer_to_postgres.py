@@ -67,9 +67,9 @@ df_json.write \
 
 # ✅ Optional Preview
 print("✅ Weather Data Preview:")
-df_csv_clean.show(5)
+df_csv.show(5)
 
 print("✅ Flight Data Preview:")
-df_json_clean.show(5)
+df_json.show(5)
 
 spark.stop()
