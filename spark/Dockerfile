@@ -15,3 +15,7 @@ RUN mkdir -p /opt/bitnami/spark/jars && \
 # Iceberg & Nessie JARs for Spark 3.3
 RUN curl -L -o /opt/bitnami/spark/jars/iceberg-spark-runtime-3.3_2.12.jar https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.3_2.12/1.4.2/iceberg-spark-runtime-3.3_2.12-1.4.2.jar && \
     curl -L -o /opt/bitnami/spark/jars/nessie-spark-extensions-3.3_2.12.jar https://repo1.maven.org/maven2/org/projectnessie/nessie-spark-extensions/3.3_2.12-0.70.0/nessie-spark-extensions-3.3_2.12-0.70.0.jar
+
+    
+# PostgreSQL JDBC driver
+RUN curl -L -o /opt/bitnami/spark/jars/postgresql-42.7.3.jar https://jdbc.postgresql.org/download/postgresql-42.7.3.jar
