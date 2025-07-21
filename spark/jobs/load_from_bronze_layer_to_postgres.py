@@ -44,7 +44,7 @@ df_json = spark.read.option("multiline", "true").json(json_file_path)
 #])
 
 # 4️⃣ Write weather_data to PostgreSQL
-df_csv_clean.write \
+df_csv.write \
     .format("jdbc") \
     .option("url", pg_url) \
     .option("dbtable", "public.weather_data_csv") \
@@ -55,7 +55,7 @@ df_csv_clean.write \
     .save()
 
 # 5️⃣ Write flight_data to PostgreSQL
-df_json_clean.write \
+df_json.write \
     .format("jdbc") \
     .option("url", pg_url) \
     .option("dbtable", "public.flight_data_json") \
