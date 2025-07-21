@@ -16,5 +16,10 @@ with DAG(
 
     run_spark_job = BashOperator(
         task_id="run_spark_job_2",
-        bash_command="docker exec spark-master spark-submit /opt/spark_jobs/load_from_bronze_layer_to_postgres.py",
+        bash_command=(
+            "docker exec spark-master spark-submit "
+            "--master spark://spark-master:7077 "
+            "--jars https://jdbc.postgresql.org/download/postgresql-42.7.3.jar "
+            "/opt/spark_jobs/load_from_bronze_layer_to_postgres.py"
+        ),
     )
