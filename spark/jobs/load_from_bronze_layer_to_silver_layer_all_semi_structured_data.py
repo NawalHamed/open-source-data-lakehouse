@@ -25,6 +25,7 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+    .config("spark.sql.catalog.nessie.write.distribution-mode", "none") \
     .getOrCreate()
 
 # 4️⃣ Load Bronze Data
