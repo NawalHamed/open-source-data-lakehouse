@@ -1,4 +1,3 @@
-
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col
 from datetime import datetime
@@ -27,6 +26,7 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .config("spark.sql.catalog.nessie.write.distribution-mode", "none") \
+    .config("spark.sql.iceberg.writer.sort-by-partition", "false") \
     .getOrCreate()
 
 # 4️⃣ Load Bronze Data
@@ -44,6 +44,7 @@ df_airline_clean = df_airline.na.fill({"name": "UNKNOWN", "country": "UNKNOWN", 
 df_airport_clean = df_airport.na.fill({"country_name": "UNKNOWN", "iata_code": "XXX"}) \
     .withColumn("country_name", upper(trim(col("country_name")))) \
     .withColumn("iata_code", upper(trim(col("iata_code")))) \
+    .withColumn("airport_name", initcap(trim(col("airport_name")))) \
     .dropDuplicates()
 
 df_flight_clean = df_flight.na.fill({"status": "UNKNOWN"}) \
@@ -72,7 +73,8 @@ try:
         "coalesce(source.updated_at, target.updated_at) as updated_at"
     )
     df_merged_airline.writeTo("nessie.silver_layer.airline_data").overwritePartitions()
-except:
+except Exception as e: # Catch specific exception or log it for debugging
+    print(f"Airline table not found or merge failed: {e}. Creating new table.")
     df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
 
 # 8️⃣ Airport MERGE
@@ -92,18 +94,22 @@ try:
         "coalesce(source.updated_at, target.updated_at) as updated_at"
     )
     df_merged_airport.writeTo("nessie.silver_layer.airport_data").overwritePartitions()
-except:
+except Exception as e: # Catch specific exception or log it for debugging
+    print(f"Airport table not found or merge failed: {e}. Creating new table.")
     df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
 
 # 9️⃣ Create or Append partitioned flight_data table
 table_path = "nessie.silver_layer.flight_data"
 try:
+    # Attempt to read to check if table exists
     spark.read.format("iceberg").load(table_path)
     print("✅ Table exists. Appending data...")
-    df_flight_clean.writeTo(table_path).append()
-except:
-    print("🆕 Table not found. Creating partitioned table...")
-    df_flight_clean.writeTo(table_path).partitionedBy("status").createOrReplace()
+    # Add orderBy for better performance with partitioned writes, though fanout writers handle unsorted.
+    df_flight_clean.orderBy("status").writeTo(table_path).append()
+except Exception as e: # Catch specific exception or log it for debugging
+    print(f"🆕 Table not found or append failed: {e}. Creating partitioned table...")
+    # Add orderBy for consistency, especially if the table is newly created.
+    df_flight_clean.orderBy("status").writeTo(table_path).partitionedBy("status").createOrReplace()
 
 # 🔟 Optional: Preview
 print("✅ Airlines Table Preview:")
