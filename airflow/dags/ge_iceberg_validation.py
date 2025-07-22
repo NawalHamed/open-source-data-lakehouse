@@ -3,72 +3,90 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime
 import pandas as pd
 import great_expectations as gx
-import boto3 # Required for MinIO/S3 interaction
-import io    # Required for reading data from S3 object into pandas
+import boto3
+import io
+import requests
 
+# ========================
+# Microsoft Teams Notification
+# ========================
+TEAMS_WEBHOOK_URL = "https://outlook.office.com/webhook/your-webhook-url-here"  # Replace with your actual webhook URL
+
+def send_teams_notification(context, status):
+    task_instance = context['task_instance']
+    dag_id = context['dag'].dag_id
+    task_id = task_instance.task_id
+    log_url = task_instance.log_url
+    color = "00FF00" if status == "Success" else "FF0000"
+
+    message = {
+        "@type": "MessageCard",
+        "@context": "http://schema.org/extensions",
+        "themeColor": color,
+        "summary": f"Airflow Task {status}",
+        "sections": [{
+            "activityTitle": f"**Airflow Task {status}**",
+            "facts": [
+                {"name": "DAG", "value": dag_id},
+                {"name": "Task", "value": task_id},
+                {"name": "Status", "value": status},
+                {"name": "Log URL", "value": log_url}
+            ],
+            "markdown": True
+        }]
+    }
+
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(TEAMS_WEBHOOK_URL, json=message, headers=headers)
+    response.raise_for_status()
+
+def on_success_callback(context):
+    send_teams_notification(context, "Success")
+
+def on_failure_callback(context):
+    send_teams_notification(context, "Failed")
+
+# ========================
+# Great Expectations Validation Function
+# ========================
 def run_great_expectations_validation_from_minio():
-    """
-    This function reads data from specified MinIO (S3-compatible) paths into Pandas DataFrames,
-    then performs Great Expectations validation on each DataFrame.
-    It will print the validation results but will NOT raise an AirflowException
-    even if validation fails for an expectation, ensuring the Airflow task always succeeds.
-    However, if data loading from MinIO fails, the task WILL raise an exception.
-    """
-    # --- MinIO Configuration (REPLACE WITH AIRFLOW CONNECTIONS IN PRODUCTION!) ---
-    MINIO_ENDPOINT = "http://minio:9009" # Example MinIO endpoint (adjust for your setup)
-    MINIO_ACCESS_KEY = "minioadmin"      # Replace with your MinIO access key
-    MINIO_SECRET_KEY = "minioadmin"      # Replace with your MinIO secret key
-    MINIO_BUCKET_NAME = "lakehouse"     # Matches 's3a://lakehouse/'
-    # --- End MinIO Configuration ---
+    MINIO_ENDPOINT = "http://minio:9009"
+    MINIO_ACCESS_KEY = "minioadmin"
+    MINIO_SECRET_KEY = "minioadmin"
+    MINIO_BUCKET_NAME = "lakehouse"
 
-    # 1️⃣ Dynamic Date Detection for Weather Data
     now = datetime.utcnow()
     year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
-    
-    # Base path for weather data (without the wildcard initially)
     bronze_weather_prefix = f"bronze_layer/{year}/{month}/{day}/csv/weather_data/"
-
-    # 2️⃣ Paths for Master Data
     bronze_country_key = "bronze_layer/master/countries_data.csv"
     bronze_city_key = "bronze_layer/master/cities_data.csv"
 
-    print(f"Connecting to MinIO endpoint: {MINIO_ENDPOINT}")
-    print(f"Using bucket: {MINIO_BUCKET_NAME}")
-
-    df_country, df_city, df_weather = None, None, None # Initialize DataFrames
+    df_country, df_city, df_weather = None, None, None
 
     try:
-        # Initialize S3 client for MinIO
         s3_client = boto3.client(
             's3',
             endpoint_url=MINIO_ENDPOINT,
             aws_access_key_id=MINIO_ACCESS_KEY,
             aws_secret_access_key=MINIO_SECRET_KEY,
-            config=boto3.session.Config(signature_version='s3v4'), # Use s3v4 for MinIO compatibility
-            verify=False # Set to True if using HTTPS with a valid certificate
+            config=boto3.session.Config(signature_version='s3v4'),
+            verify=False
         )
         print("MinIO S3 client initialized.")
 
-        # Helper function to read a single CSV from MinIO
         def read_csv_from_minio(bucket, key):
             print(f"Reading s3a://{bucket}/{key}...")
             obj = s3_client.get_object(Bucket=bucket, Key=key)
             return pd.read_csv(io.BytesIO(obj['Body'].read()))
 
-        # 4️⃣ Load Bronze Data into Pandas DataFrames
-
-        # Load Country Data
         df_country = read_csv_from_minio(MINIO_BUCKET_NAME, bronze_country_key)
         print(f"df_country loaded. Shape: {df_country.shape}")
-        print("df_country head:\n", df_country.head())
+        print(df_country.head())
 
-        # Load City Data
         df_city = read_csv_from_minio(MINIO_BUCKET_NAME, bronze_city_key)
         print(f"df_city loaded. Shape: {df_city.shape}")
-        print("df_city head:\n", df_city.head())
+        print(df_city.head())
 
-        # Load Weather Data (handling wildcard)
-        print(f"Listing objects in s3a://{MINIO_BUCKET_NAME}/{bronze_weather_prefix}...")
         weather_dfs = []
         paginator = s3_client.get_paginator('list_objects_v2')
         pages = paginator.paginate(Bucket=MINIO_BUCKET_NAME, Prefix=bronze_weather_prefix)
@@ -86,23 +104,20 @@ def run_great_expectations_validation_from_minio():
 
         if not weather_dfs:
             print("No weather CSV files found for the current date. Creating empty DataFrame.")
-            df_weather = pd.DataFrame() # Create an empty DataFrame if no files found
+            df_weather = pd.DataFrame()
         else:
             df_weather = pd.concat(weather_dfs, ignore_index=True)
-        
+
         print(f"df_weather loaded. Total shape: {df_weather.shape}")
-        print("df_weather head:\n", df_weather.head())
+        print(df_weather.head())
 
     except Exception as e:
         print(f"An error occurred during MinIO data loading: {e}")
-        # If data loading fails, we should typically fail the Airflow task
         raise Exception(f"Failed to load data from MinIO: {e}") 
 
-    # --- Great Expectations Validation ---
     print("\n--- Starting Great Expectations Validation ---")
     all_validations_successful = True
 
-    # Validate df_country
     if not df_country.empty:
         print("\nValidating df_country...")
         validator_country = gx.from_pandas(df_country)
@@ -117,40 +132,33 @@ def run_great_expectations_validation_from_minio():
                     print(f"- {result.expectation_config.expectation_type} (Column: {result.expectation_config.kwargs.get('column')}): {result.result}")
     else:
         print("df_country is empty, skipping validation.")
-        # Consider if an empty master data DataFrame should fail the task
-        # all_validations_successful = False # Uncomment to fail if master data is empty
 
-   
     print("\n--- Great Expectations Validation Process Completed ---")
     if all_validations_successful:
-        print("All Great Expectations validations passed across all DataFrames.")
+        print("✅ All Great Expectations validations passed.")
     else:
-        print("Some Great Expectations validations failed. Check logs for details. Task will still succeed as configured.")
+        print("❌ Some validations failed. Check logs for details.")
 
-
-# Define the Airflow DAG
+# ========================
+# DAG Definition
+# ========================
 with DAG(
-    dag_id='minio_data_quality_check', # A new, more descriptive DAG ID
+    dag_id='minio_data_quality_check_with_teams',
     start_date=datetime(2023, 1, 1),
     schedule_interval=None,
     catchup=False,
     tags=['data_quality', 'minio', 'great_expectations', 'pandas', 'lakehouse', 'bronze'],
     doc_md="""
-    ### MinIO Bronze Layer Data Quality Check with Great Expectations
-    This DAG reads daily weather data and master data (countries, cities) from the
-    MinIO bronze layer into Pandas DataFrames. It then applies Great Expectations
-    validations to each DataFrame.
-
-    The task is configured to always succeed, even if data quality expectations are
-    not met, but detailed failures will be logged. If data loading from MinIO fails,
-    the task will fail.
-
-    **IMPORTANT**: MinIO credentials are hardcoded for demonstration. Use Airflow
-    Connections or environment variables in production for security.
+    ### MinIO Bronze Layer Data Quality Check with Great Expectations and Teams Alerts
+    This DAG reads daily weather and master data (countries, cities) from the
+    MinIO bronze layer into Pandas DataFrames. It performs Great Expectations
+    validation and notifies a Microsoft Teams channel of task success or failure.
     """
 ) as dag:
-    # Define the PythonOperator task
+
     data_quality_check_task = PythonOperator(
         task_id='run_minio_data_quality_checks',
         python_callable=run_great_expectations_validation_from_minio,
+        on_success_callback=on_success_callback,
+        on_failure_callback=on_failure_callback,
     )
