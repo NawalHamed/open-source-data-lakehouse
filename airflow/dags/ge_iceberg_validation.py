@@ -10,7 +10,7 @@ import requests
 # ========================
 # Microsoft Teams Notification
 # ========================
-TEAMS_WEBHOOK_URL = "https://outlook.office.com/webhook/your-webhook-url-here"  # Replace with your actual webhook URL
+TEAMS_WEBHOOK_URL = "https://rihalom598.webhook.office.com/webhookb2/847565b1-bf59-4ce3-b74b-e47d69197c20@6f1bd9ba-810d-45ab-9cc6-e34cb343de1d/IncomingWebhook/ffdf6b2f5cfe4dddae5a7191b96c1cb7/e0de8690-8392-4934-b037-c8c3dbb85f51/V2k23R6sj5i-Rs1JdC59Nv6qo3jzKZXVDJ_KVJB-ioQWQ1"  # Replace with your actual webhook URL
 
 def send_teams_notification(context, status):
     task_instance = context['task_instance']
