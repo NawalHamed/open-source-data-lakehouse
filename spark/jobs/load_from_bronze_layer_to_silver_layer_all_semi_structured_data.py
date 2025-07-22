@@ -1,3 +1,4 @@
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col
 from datetime import datetime
@@ -94,22 +95,15 @@ try:
 except:
     df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
 
-# 9️⃣ Recreate partitioned flight_data table
-df_existing_flight = None
+# 9️⃣ Create or Append partitioned flight_data table
+table_path = "nessie.silver_layer.flight_data"
 try:
-    df_existing_flight = spark.read.format("iceberg").load("nessie.silver_layer.flight_data")
+    spark.read.format("iceberg").load(table_path)
+    print("✅ Table exists. Appending data...")
+    df_flight_clean.writeTo(table_path).append()
 except:
-    pass
-
-df_combined_flight = df_existing_flight.unionByName(df_flight_clean) if df_existing_flight else df_flight_clean
-
-# Drop old unpartitioned table
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.flight_data")
-
-# Write partitioned table
-df_combined_flight.writeTo("nessie.silver_layer.flight_data") \
-    .partitionedBy("status") \
-    .createOrReplace()
+    print("🆕 Table not found. Creating partitioned table...")
+    df_flight_clean.writeTo(table_path).partitionedBy("status").createOrReplace()
 
 # 🔟 Optional: Preview
 print("✅ Airlines Table Preview:")
