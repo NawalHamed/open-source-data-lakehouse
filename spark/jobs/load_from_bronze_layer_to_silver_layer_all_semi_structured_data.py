@@ -15,6 +15,10 @@ bronze_airport_path = "s3a://lakehouse/bronze_layer/master/airports_data.json"
 spark = SparkSession.builder \
     .appName("Bronze to Silver Incremental Load with Partitioning") \
     .master("spark://spark-master:7077") \
+    .config("spark.executor.memory", "6g") \
+    .config("spark.executor.cores", "3") \
+    .config("spark.cores.max", "6") \
+    .config("spark.driver.memory", "3g") \
     .config("spark.sql.catalog.nessie", "org.apache.iceberg.spark.SparkCatalog") \
     .config("spark.sql.catalog.nessie.catalog-impl", "org.apache.iceberg.nessie.NessieCatalog") \
     .config("spark.sql.catalog.nessie.uri", "http://nessie:19120/api/v1") \
