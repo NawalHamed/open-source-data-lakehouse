@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col
 from datetime import datetime
+from py4j.protocol import Py4JJavaError
 
 # 1️⃣ Dynamic Date Detection for Flights
 now = datetime.utcnow()
@@ -107,6 +108,36 @@ except:
     df_flight_clean.writeTo("nessie.silver_layer.flight_data").createOrReplace()
 
 
+# 7️⃣ Flight Table Migration with Partitioning on `status`
+partition_column = "status"
+source_table = "nessie.silver_layer.flight_data"
+temp_partitioned_table = "nessie.silver_layer.flight_data_partitioned"
+
+try:
+    print(f"📥 Reading existing table: {source_table}")
+    df_old = spark.read.format("iceberg").load(source_table)
+
+    print(f"➕ Combining old and new flight data")
+    df_combined = df_old.unionByName(df_flight_clean)
+
+    print(f"📝 Writing combined data to new partitioned table: {temp_partitioned_table}")
+    df_combined.writeTo(temp_partitioned_table) \
+        .partitionedBy(partition_column) \
+        .createOrReplace()
+
+    print(f"❌ Dropping old unpartitioned table: {source_table}")
+    spark.sql(f"DROP TABLE IF EXISTS {source_table}")
+
+    print(f"✅ Renaming new table to original name: {source_table}")
+    spark.sql(f"ALTER TABLE {temp_partitioned_table} RENAME TO flight_data")
+
+except Py4JJavaError as e:
+    print(f"⚠️ Migration failed: {e}")
+    print("💡 Make sure the table exists and Spark has access to Iceberg metadata.")
+
+# 🔟 Optional: Preview
+print("✅ Final Table Preview (Partitioned):")
+spark.read.table("nessie.silver_layer.flight_data").show(5)
 
 # 🔟 Optional: Verify
 print("✅ Airlines Table Preview:")
