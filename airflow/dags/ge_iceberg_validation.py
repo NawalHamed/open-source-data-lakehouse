@@ -143,7 +143,7 @@ def run_great_expectations_validation_from_minio():
 # DAG Definition
 # ========================
 with DAG(
-    dag_id='minio_data_quality_check_with_teams',
+    dag_id='data_quality_great_expectations',
     start_date=datetime(2023, 1, 1),
     schedule_interval=None,
     catchup=False,
