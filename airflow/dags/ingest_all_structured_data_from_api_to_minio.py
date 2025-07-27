@@ -10,7 +10,7 @@ from itertools import product
 from string import ascii_uppercase
 
 # =================== CONFIGURATION ===================
-NUM_WEATHER_RECORDS = 500
+NUM_WEATHER_RECORDS = 250000
 NUM_COUNTRY_RECORDS = 50
 NUM_CITY_RECORDS = 200
 
