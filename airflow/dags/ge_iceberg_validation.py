@@ -135,9 +135,9 @@ def run_great_expectations_validation_from_minio():
 
     print("\n--- Great Expectations Validation Process Completed ---")
     if all_validations_successful:
-        print("✅ All Great Expectations validations passed.")
+        print("All Great Expectations validations passed.")
     else:
-        print("❌ Some validations failed. Check logs for details.")
+        print("Some validations failed. Check logs for details.")
 
 # ========================
 # DAG Definition
