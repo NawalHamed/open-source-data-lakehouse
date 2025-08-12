@@ -149,6 +149,11 @@ def run_great_expectations_validation_from_minio():
         print("\nValidating df_country...")
         validator_country = gx.from_pandas(df_country)
         validator_country.expect_column_to_exist("name")
+        validator_country.expect_column_to_exist("iso2")
+        validator_country.expect_column_to_exist("capital")
+        validator_country.expect_column_to_exist("continent")
+        validator_country.expect_column_to_exist("population")
+        validator_country.expect_column_to_exist("id")
         results_country = validator_country.validate()
         
         print(f"df_country Validation Success: {results_country.success}")
