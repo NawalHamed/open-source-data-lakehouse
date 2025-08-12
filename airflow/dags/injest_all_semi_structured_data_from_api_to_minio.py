@@ -42,6 +42,7 @@ AIRCRAFT_TYPES = ["Boeing 737", "Boeing 747", "Airbus A320", "Airbus A380", "Emb
 # =================== DATA GENERATORS ===================
 class AirlineGenerator:
     def __init__(self):
+        # Pre-generate all possible codes and shuffle them
         self.available_iata = [f"{a}{b}" for a, b in product(ascii_uppercase, repeat=2)]
         self.available_icao = [f"{a}{b}{c}" for a, b, c in product(ascii_uppercase, repeat=3)]
         random.shuffle(self.available_iata)
@@ -137,7 +138,7 @@ def object_exists(client, object_name):
 def generate_airline_master():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
     if object_exists(client, MASTER_AIRLINE_PATH):
-        print("✅ Airline master already exists, skipping.")
+        print("Airline master already exists, skipping.")
         return
     
     now = datetime.utcnow().isoformat()
@@ -145,12 +146,12 @@ def generate_airline_master():
     data = [ag.generate_airline(i, now) for i in range(NUM_AIRLINE_RECORDS)]
     
     client.put_object(MINIO_BUCKET, MASTER_AIRLINE_PATH, BytesIO(json.dumps(data).encode()), len(json.dumps(data)), "application/json")
-    print(f"✅ Master Airline data generated: {len(data)} records")
+    print(f"Master Airline data generated: {len(data)} records")
 
 def generate_airport_master():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
     if object_exists(client, MASTER_AIRPORT_PATH):
-        print("✅ Airport master already exists, skipping.")
+        print("Airport master already exists, skipping.")
         return
     
     now = datetime.utcnow().isoformat()
@@ -158,7 +159,7 @@ def generate_airport_master():
     data = [ag.generate_airport(i, now) for i in range(NUM_AIRPORT_RECORDS)]
     
     client.put_object(MINIO_BUCKET, MASTER_AIRPORT_PATH, BytesIO(json.dumps(data).encode()), len(json.dumps(data)), "application/json")
-    print(f"✅ Master Airport data generated: {len(data)} records")
+    print(f"Master Airport data generated: {len(data)} records")
 
 def generate_flight_data():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -178,7 +179,7 @@ def generate_flight_data():
     data = [fg.generate_flight(timestamp) for _ in range(NUM_FLIGHT_RECORDS)]
 
     client.put_object(MINIO_BUCKET, object_name, BytesIO(json.dumps(data).encode()), len(json.dumps(data)), "application/json")
-    print(f"✅ Flight data generated: {len(data)} records to {object_name}")
+    print(f"Flight data generated: {len(data)} records to {object_name}")
 
 # =================== DAG CONFIGURATION ===================
 default_args = {'owner': 'airflow', 'retries': 1, 'retry_delay': timedelta(minutes=5)}
@@ -191,9 +192,12 @@ with DAG(
     catchup=False,
     tags=['minio', 'master-data', 'flights']
 ) as dag:
-
+    # Task 1: Generate airline master data
     t1 = PythonOperator(task_id='generate_airline_master', python_callable=generate_airline_master)
+    # Task 2: Generate airport master data
     t2 = PythonOperator(task_id='generate_airport_master', python_callable=generate_airport_master)
+    # Task 3: Generate daily flight data
     t3 = PythonOperator(task_id='generate_flight_data', python_callable=generate_flight_data)
-
+    
+    # Task dependencies: airline -> airport -> flights
     t1 >> t2 >> t3
