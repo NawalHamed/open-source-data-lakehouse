@@ -10,20 +10,24 @@ from itertools import product
 from string import ascii_uppercase
 
 # =================== CONFIGURATION ===================
+
+# Number of records to generate for each dataset
 NUM_WEATHER_RECORDS = 250000
 NUM_COUNTRY_RECORDS = 50
 NUM_CITY_RECORDS = 200
 
+# MinIO storage configuration
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'lakehouse'
-FILE_FORMAT = 'csv'
+FILE_FORMAT = 'csv' # Output file format for stored data
 
+# Paths to store master datasets in MinIO
 MASTER_COUNTRY_PATH = "bronze_layer/master/countries_data.csv"
-MASTER_CITY_PATH = "bronze_layer/master/cities_data.csv"
+MASTER_CITY_PATH = "bronze_layer/master/cities_data.csv" 
 
-# Weather data configuration
+# Sample values for weather generation
 CITIES = ["New York", "London", "Berlin", "Tokyo", "Muscat", "Paris", "Toronto", "Dubai"]
 COUNTRIES = ["USA", "UK", "Germany", "Japan", "Oman", "France", "Canada", "UAE"]
 REGIONS = ["East", "West", "North", "South", None]
@@ -36,7 +40,7 @@ WEATHER_CONDITIONS = [
     {"code": 119, "desc": "Cloudy"},
 ]
 
-# Country data configuration
+# Predefined country data for master dataset
 PREDEFINED_COUNTRIES = [
     {"name": "United States", "iso2": "US", "capital": "Washington", "continent": "NA", "population": 331000000},
     {"name": "Germany", "iso2": "DE", "capital": "Berlin", "continent": "EU", "population": 83000000},
@@ -44,7 +48,7 @@ PREDEFINED_COUNTRIES = [
     {"name": "France", "iso2": "FR", "capital": "Paris", "continent": "EU", "population": 67000000},
 ]
 
-# City data configuration
+# ISO2 country codes for city generation
 COUNTRY_CODES = ["US", "DE", "JP", "FR", "OM", "CA", "GB"]
 
 # =================== DATA GENERATORS ===================
@@ -147,7 +151,7 @@ def upload_to_minio(data, object_name, file_format):
 def generate_country_master():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
     if object_exists(client, MASTER_COUNTRY_PATH):
-        print("✅ Country master already exists, skipping.")
+        print("Country master already exists, skipping.")
         return
     
     now = datetime.utcnow().isoformat()
@@ -155,12 +159,12 @@ def generate_country_master():
     data = [cg.generate_country(i, now) for i in range(NUM_COUNTRY_RECORDS)]
     
     upload_to_minio(data, MASTER_COUNTRY_PATH, FILE_FORMAT)
-    print(f"✅ Master Country data generated: {len(data)} records")
+    print(f"Master Country data generated: {len(data)} records")
 
 def generate_city_master():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
     if object_exists(client, MASTER_CITY_PATH):
-        print("✅ City master already exists, skipping.")
+        print("City master already exists, skipping.")
         return
     
     now = datetime.utcnow().isoformat()
@@ -168,7 +172,7 @@ def generate_city_master():
     data = [cg.generate_city(i, now) for i in range(NUM_CITY_RECORDS)]
     
     upload_to_minio(data, MASTER_CITY_PATH, FILE_FORMAT)
-    print(f"✅ Master City data generated: {len(data)} records")
+    print(f"Master City data generated: {len(data)} records")
 
 def generate_weather_data():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -182,15 +186,18 @@ def generate_weather_data():
     data = [wg.generate_weather_record(timestamp) for _ in range(NUM_WEATHER_RECORDS)]
 
     upload_to_minio(data, object_name, FILE_FORMAT)
-    print(f"✅ Weather data generated: {len(data)} records to {object_name}")
+    print(f"Weather data generated: {len(data)} records to {object_name}")
 
 # =================== DAG CONFIGURATION ===================
+
+# Default task arguments for Airflow DAG
 default_args = {
     'owner': 'airflow',
     'retries': 1,
     'retry_delay': timedelta(minutes=5)
 }
 
+# DAG definition
 with DAG(
     dag_id='ingest_all_structured_data_from_api_to_minio',
     default_args=default_args,
@@ -199,9 +206,11 @@ with DAG(
     catchup=False,
     tags=['minio', 'master-data', 'weather', 'countries', 'cities']
 ) as dag:
-
+    
+ # Task definitions
     t1 = PythonOperator(task_id='generate_country_master', python_callable=generate_country_master)
     t2 = PythonOperator(task_id='generate_city_master', python_callable=generate_city_master)
     t3 = PythonOperator(task_id='generate_weather_data', python_callable=generate_weather_data)
-
+    
+ # Task dependencies: countries → cities → weather
     t1 >> t2 >> t3
