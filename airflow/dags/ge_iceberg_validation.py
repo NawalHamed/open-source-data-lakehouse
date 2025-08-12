@@ -14,7 +14,7 @@ import requests # For sending HTTP requests (used to send Teams notifications)
 # ========================
 # Webhook URL for sending notifications to a Microsoft Teams channel
 # ========================
-TEAMS_WEBHOOK_URL = "https://rihalom598.webhook.office.com/webhookb2/aa0dc364-e78a-4384-b733-59b516f1f7f1@6f1bd9ba-810d-45ab-9cc6-e34cb343de1d/IncomingWebhook/2001d59c96c44405ac5dc30da4ec6b6c/8a7137b6-5a10-474a-8467-6bdbbfb589b7/V2J_N8S32Dx7sNpkMY29xrnjreuUDrV-hOIzLkHYigedg1"  # Replace with your actual webhook URL
+TEAMS_WEBHOOK_URL = "https://rihalom598.webhook.office.com/webhookb2/aa0dc364-e78a-4384-b733-59b516f1f7f1@6f1bd9ba-810d-45ab-9cc6-e34cb343de1d/IncomingWebhook/2001d59c96c44405ac5dc30da4ec6b6c/8a7137b6-5a10-474a-8467-6bdbbfb589b7/V2J_N8S32Dx7sNpkMY29xrnjreuUDrV-hOIzLkHYigedg1" 
 
 def send_teams_notification(context, status):
     task_instance = context['task_instance']
