@@ -11,20 +11,22 @@ from minio import Minio
 
 # =================== CONFIGURATION ===================
 # Number of records to generate for each dataset
-
 NUM_AIRLINE_RECORDS = 50
 NUM_AIRPORT_RECORDS = 10
 NUM_FLIGHT_RECORDS = 500
 
+# MinIO connection details
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'lakehouse'
 FILE_FORMAT = 'json'
 
+# File paths for master datasets
 MASTER_AIRLINE_PATH = "bronze_layer/master/airlines_data.json"
 MASTER_AIRPORT_PATH = "bronze_layer/master/airports_data.json"
 
+# Country codes, names, and airport hubs
 COUNTRIES = {
     "US": {"name": "United States", "hubs": ["ATL", "DFW", "ORD", "LAX", "JFK"]},
     "DE": {"name": "Germany", "hubs": ["FRA", "MUC", "TXL"]},
@@ -34,6 +36,7 @@ COUNTRIES = {
     "IN": {"name": "India", "hubs": ["DEL", "BOM", "BLR"]},
 }
 
+# List of possible aircraft types
 AIRCRAFT_TYPES = ["Boeing 737", "Boeing 747", "Airbus A320", "Airbus A380", "Embraer E190", "Bombardier CRJ-900", "ATR 72"]
 
 # =================== DATA GENERATORS ===================
