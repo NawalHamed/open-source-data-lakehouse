@@ -8,7 +8,10 @@ from string import ascii_uppercase
 from itertools import product
 from minio import Minio
 
+
 # =================== CONFIGURATION ===================
+# Number of records to generate for each dataset
+
 NUM_AIRLINE_RECORDS = 50
 NUM_AIRPORT_RECORDS = 10
 NUM_FLIGHT_RECORDS = 500
