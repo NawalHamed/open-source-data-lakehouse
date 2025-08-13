@@ -2,16 +2,16 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col
 from datetime import datetime
 
-# 1️⃣ Dynamic Date Detection for Flights
+# Dynamic Date Detection for Flights
 now = datetime.utcnow()
 year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
 bronze_flight_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/json/flight_data/*.json"
 
-# 2️⃣ Paths for Master Data
+# Paths for Master Data
 bronze_airline_path = "s3a://lakehouse/bronze_layer/master/airlines_data.json"
 bronze_airport_path = "s3a://lakehouse/bronze_layer/master/airports_data.json"
 
-# 3️⃣ Initialize Spark
+# Initialize Spark
 spark = SparkSession.builder \
     .appName("Bronze to Silver Incremental Load with Partitioning") \
     .master("spark://spark-master:7077") \
@@ -33,12 +33,12 @@ spark = SparkSession.builder \
     .config("spark.sql.iceberg.writer.sort-by-partition", "false") \
     .getOrCreate()
 
-# 4️⃣ Load Bronze Data
+# Load Bronze Data
 df_airline = spark.read.option("multiline", "true").json(bronze_airline_path)
 df_airport = spark.read.option("multiline", "true").json(bronze_airport_path)
 df_flight = spark.read.option("multiline", "true").json(bronze_flight_path)
 
-# 5️⃣ Clean and Transform
+# Clean and Transform
 df_airline_clean = df_airline.na.fill({"name": "UNKNOWN", "country": "UNKNOWN", "iata": "XXX"}) \
     .withColumn("name", initcap(trim(col("name")))) \
     .withColumn("country", upper(trim(col("country")))) \
@@ -55,10 +55,10 @@ df_flight_clean = df_flight.na.fill({"status": "UNKNOWN"}) \
     .withColumn("flight_number", upper(trim(col("flight_number")))) \
     .dropDuplicates()
 
-# 6️⃣ Ensure Namespace
+# Ensure Namespace
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-# 7️⃣ Airline MERGE
+# Airline MERGE
 try:
     df_existing_airline = spark.read.format("iceberg").load("nessie.silver_layer.airline_data")
     df_merged_airline = df_existing_airline.alias("target").join(
@@ -81,7 +81,7 @@ except Exception as e: # Catch specific exception or log it for debugging
     print(f"Airline table not found or merge failed: {e}. Creating new table.")
     df_airline_clean.writeTo("nessie.silver_layer.airline_data").createOrReplace()
 
-# 8️⃣ Airport MERGE
+# Airport MERGE
 try:
     df_existing_airport = spark.read.format("iceberg").load("nessie.silver_layer.airport_data")
     df_merged_airport = df_existing_airport.alias("target").join(
@@ -102,27 +102,27 @@ except Exception as e: # Catch specific exception or log it for debugging
     print(f"Airport table not found or merge failed: {e}. Creating new table.")
     df_airport_clean.writeTo("nessie.silver_layer.airport_data").createOrReplace()
 
-# 9️⃣ Create or Append partitioned flight_data table
+# Create or Append partitioned flight_data table
 table_path = "nessie.silver_layer.flight_data"
 try:
     # Attempt to read to check if table exists
     spark.read.format("iceberg").load(table_path)
-    print("✅ Table exists. Appending data...")
+    print("Table exists. Appending data...")
     # Add orderBy for better performance with partitioned writes, though fanout writers handle unsorted.
     df_flight_clean.orderBy("status").writeTo(table_path).append()
 except Exception as e: # Catch specific exception or log it for debugging
-    print(f"🆕 Table not found or append failed: {e}. Creating partitioned table...")
+    print(f"Table not found or append failed: {e}. Creating partitioned table...")
     # Add orderBy for consistency, especially if the table is newly created.
     df_flight_clean.orderBy("status").writeTo(table_path).partitionedBy("status").createOrReplace()
 
-# 🔟 Optional: Preview
-print("✅ Airlines Table Preview:")
+# Optional: Preview
+print("Airlines Table Preview:")
 spark.read.table("nessie.silver_layer.airline_data").show(5)
 
-print("✅ Airports Table Preview:")
+print("Airports Table Preview:")
 spark.read.table("nessie.silver_layer.airport_data").show(5)
 
-print("✅ Flights Table Preview:")
+print("Flights Table Preview:")
 spark.read.table("nessie.silver_layer.flight_data").show(5)
 
 spark.stop()
