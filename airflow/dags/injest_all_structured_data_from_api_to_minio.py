@@ -199,9 +199,9 @@ default_args = {
 
 # DAG definition
 with DAG(
-    dag_id='ingest_all_structured_data_from_api_to_minio',
+    dag_id='injest_all_structured_data_from_api_to_minio',
     default_args=default_args,
-    schedule_interval='@daily',
+    schedule_interval='@daily', # Run every day
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=['minio', 'master-data', 'weather', 'countries', 'cities']
