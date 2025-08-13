@@ -23,7 +23,7 @@ airline_df = spark.table("nessie.silver_layer.airline_data")
 airport_df = spark.table("nessie.silver_layer.airport_data")
 countries_df = spark.table("nessie.silver_layer.countries_data")
 cities_df = spark.table("nessie.silver_layer.cities_data")
-weather_df = spark.table("nessie.silver_layer.weather_data")
+#weather_df = spark.table("nessie.silver_layer.weather_data")
 
 # ================= Delete Existing Gold Tables =================
 gold_tables = [
@@ -44,11 +44,13 @@ flight_perf_df = flight_df.join(
     airline_df, 
     flight_df.airline_iata == airline_df.iata, 
     "left"
-).join(
-    weather_df, 
-    flight_df.departure_airport_iata == weather_df.city, 
-    "left"
-).select(
+) \
+# .join(  # Weather join removed
+#     weather_df, 
+#     flight_df.departure_airport_iata == weather_df.city, 
+#     "left"
+# ) \
+.select(
     flight_df.flight_id,
     flight_df.flight_number,
     flight_df.airline_iata,
@@ -58,9 +60,9 @@ flight_perf_df = flight_df.join(
     flight_df.arrival_airport_iata,
     flight_df.distance_km,
     flight_df.status.alias("flight_status"),
-    weather_df.weather_desc.alias("weather_condition"),
-    weather_df.temperature_c,
-    weather_df.wind_speed_kmh
+    # weather_df.weather_desc.alias("weather_condition"),
+    # weather_df.temperature_c,
+    # weather_df.wind_speed_kmh
 )
 
 flight_perf_df.writeTo("nessie.gold_layer.flight_performance_summary_v1").createOrReplace()
@@ -84,28 +86,28 @@ airport_analysis_df.writeTo("nessie.gold_layer.airport_capacity_analysis_v1").cr
 print("Airport Capacity Analysis created in Iceberg")
 
 # ================== 3. City Weather Analysis ==================
-city_weather_df = cities_df.join(
-    weather_df, 
-    cities_df.iata_code == weather_df.city, 
-    "left"
-).join(
-    countries_df, 
-    cities_df.country_iso2 == countries_df.iso2, 
-    "left"
-).select(
-    cities_df.city_name,
-    cities_df.country_iso2,
-    countries_df.name.alias("country_name"),
-    cities_df.latitude,
-    cities_df.longitude,
-    weather_df.temperature_c,
-    weather_df.humidity,
-    weather_df.wind_speed_kmh,
-    weather_df.weather_desc
-)
+# city_weather_df = cities_df.join(
+#     weather_df, 
+#     cities_df.iata_code == weather_df.city, 
+#     "left"
+# ).join(
+#     countries_df, 
+#     cities_df.country_iso2 == countries_df.iso2, 
+#     "left"
+# ).select(
+#     cities_df.city_name,
+#     cities_df.country_iso2,
+#     countries_df.name.alias("country_name"),
+#     cities_df.latitude,
+#     cities_df.longitude,
+#     weather_df.temperature_c,
+#     weather_df.humidity,
+#     weather_df.wind_speed_kmh,
+#     weather_df.weather_desc
+# )
 
-city_weather_df.writeTo("nessie.gold_layer.city_weather_analysis_v1").createOrReplace()
-print("City Weather Analysis created in Iceberg")
+# city_weather_df.writeTo("nessie.gold_layer.city_weather_analysis_v1").createOrReplace()
+# print("City Weather Analysis created in Iceberg")
 
 # ================== Pipeline Complete ==================
 print("Gold Layer Pipeline Complete - All tables recreated in Iceberg")
