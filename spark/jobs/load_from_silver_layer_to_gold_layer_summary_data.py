@@ -44,7 +44,7 @@ flight_perf_df = flight_df.join(
     airline_df, 
     flight_df.airline_iata == airline_df.iata, 
     "left"
-) \
+)
 # .join(  # Weather join removed
 #     weather_df, 
 #     flight_df.departure_airport_iata == weather_df.city, 
