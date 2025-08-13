@@ -2,16 +2,16 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col, coalesce
 from datetime import datetime
 
-# 1️⃣ Dynamic Date Detection for Weather Data
+# Dynamic Date Detection for Weather Data
 now = datetime.utcnow()
 year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
 bronze_weather_path = f"s3a://lakehouse/bronze_layer/{year}/{month}/{day}/csv/weather_data/*.csv"
 
-# 2️⃣ Paths for Master Data
+# Paths for Master Data
 bronze_country_path = "s3a://lakehouse/bronze_layer/master/countries_data.csv"
 bronze_city_path = "s3a://lakehouse/bronze_layer/master/cities_data.csv"
 
-# 3️⃣ Initialize Spark
+# Initialize Spark
 spark = SparkSession.builder \
     .appName("Structured Data Bronze to Silver Incremental Load") \
     .master("spark://spark-master:7077") \
@@ -31,12 +31,12 @@ spark = SparkSession.builder \
 #spark.sql("DROP TABLE IF EXISTS nessie.gold_layer.flight_performance_summary")
 
 
-# 4️⃣ Load Bronze Data
+# Load Bronze Data
 df_country = spark.read.option("header", True).csv(bronze_country_path)
 df_city = spark.read.option("header", True).csv(bronze_city_path)
 df_weather = spark.read.option("header", True).csv(bronze_weather_path)
 
-# 5️⃣ Clean and Transform
+# Clean and Transform
 df_country_clean = df_country.na.fill({
         "name": "UNKNOWN",
         "iso2": "XX",
@@ -72,10 +72,10 @@ df_weather_clean = df_weather.na.fill({
     .withColumn("weather_desc", upper(trim(col("weather_desc")))) \
     .dropDuplicates()
 
-# 6️⃣ Ensure Namespace
+# Ensure Namespace
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
-# 7️⃣ Country MERGE using DataFrame join logic
+# Country MERGE using DataFrame join logic
 try:
     df_existing_country = spark.read.format("iceberg").load("nessie.silver_layer.countries_data")
     df_merged_country = df_existing_country.alias("target").join(
@@ -94,7 +94,7 @@ try:
 except:
     df_country_clean.writeTo("nessie.silver_layer.countries_data").createOrReplace()
 
-# 8️⃣ City MERGE using DataFrame join logic
+# City MERGE using DataFrame join logic
 try:
     df_existing_city = spark.read.format("iceberg").load("nessie.silver_layer.cities_data")
     df_merged_city = df_existing_city.alias("target").join(
@@ -114,20 +114,20 @@ try:
 except:
     df_city_clean.writeTo("nessie.silver_layer.cities_data").createOrReplace()
 
-# 9️⃣ Weather Data - Append Only (Daily)
+# Weather Data - Append Only (Daily)
 try:
     df_weather_clean.writeTo("nessie.silver_layer.weather_data").append()
 except:
     df_weather_clean.writeTo("nessie.silver_layer.weather_data").createOrReplace()
 
-# 🔟 Optional: Verify
-print("✅ Countries Table Preview:")
+# Optional: Verify
+print("Countries Table Preview:")
 spark.read.table("nessie.silver_layer.countries_data").show(5)
 
-print("✅ Cities Table Preview:")
+print("Cities Table Preview:")
 spark.read.table("nessie.silver_layer.cities_data").show(5)
 
-print("✅ Weather Table Preview:")
+print("Weather Table Preview:")
 spark.read.table("nessie.silver_layer.weather_data").show(5)
 
 spark.stop()
