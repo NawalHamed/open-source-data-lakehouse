@@ -13,7 +13,7 @@ default_args = {
 with DAG(
     dag_id="load_semi_structured_data_from_bronze_to_silver",
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@daily", # Run once every day at midnight UTC
     catchup=False,
 ) as dag:
 
