@@ -21,11 +21,11 @@ image_df = spark.read.format("image").load("s3a://lakehouse/bronze_layer/unstruc
 # Optional: Show schema and metadata
 image_df.printSchema()
 image_df.select(
-    "image.origin",
-    "image.height",
-    "image.width",
-    "image.nChannels",
-    "image.mode"
+    "image.origin", # File path or origin of image
+    "image.height", # Image height in pixels
+    "image.width",  # Image width in pixels
+    "image.nChannels", # Number of color channels
+    "image.mode" # Color mode (e.g., RGB, grayscale)
 ).show(truncate=False)
 
 # Step 3: Create namespace/schema in Iceberg via Nessie if it doesn't exist
