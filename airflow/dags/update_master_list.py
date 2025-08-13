@@ -1,5 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+
+# Python standard libraries
 from datetime import datetime, timedelta
 import random
 import json
@@ -10,17 +12,20 @@ from itertools import product
 from minio import Minio
 
 # ============== CONFIGURATION =================
+
+# MinIO connection details
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
 MINIO_SECRET_KEY = 'minioadmin'
 MINIO_BUCKET = 'lakehouse'
 
-# Master data paths
+# File paths in the Bronze Layer
 MASTER_AIRLINE_PATH = "bronze_layer/master/airlines_data.json"
 MASTER_AIRPORT_PATH = "bronze_layer/master/airports_data.json"
 MASTER_COUNTRY_PATH = "bronze_layer/master/countries_data.csv"
 MASTER_CITY_PATH = "bronze_layer/master/cities_data.csv"
 
+# Predefined country master data
 COUNTRIES = {
     "US": {"name": "United States", "hubs": ["ATL", "DFW", "ORD", "LAX", "JFK"]},
     "DE": {"name": "Germany", "hubs": ["FRA", "MUC", "TXL"]},
@@ -30,11 +35,15 @@ COUNTRIES = {
     "IN": {"name": "India", "hubs": ["DEL", "BOM", "BLR"]},
 }
 
+# List of continent codes
 CONTINENTS = ["AF", "EU", "AS", "NA", "SA", "OC", "AN"]
 
 # ============== DATA GENERATORS ==============
+# These classes produce mock "master data" records for Airlines, Airports, Countries, and Cities.
+
 class AirlineGenerator:
     def __init__(self):
+        # All possible two-letter and three-letter codes
         self.available_iata = [f"{a}{b}" for a, b in product(ascii_uppercase, repeat=2)]
         self.available_icao = [f"{a}{b}{c}" for a, b, c in product(ascii_uppercase, repeat=3)]
         random.shuffle(self.available_iata)
@@ -137,6 +146,7 @@ def load_existing_json_data(client, object_name):
         obj = client.get_object(MINIO_BUCKET, object_name)
         return json.loads(obj.read())
     except:
+        # Return empty list if file is missing or unreadable
         return []
 
 def load_existing_csv_data(client, object_name):
@@ -150,14 +160,14 @@ def load_existing_csv_data(client, object_name):
 def save_as_json(client, object_name, data):
     client.put_object(
         MINIO_BUCKET, object_name,
-        BytesIO(json.dumps(data).encode()),
+        BytesIO(json.dumps(data).encode()), # Convert to bytes
         len(json.dumps(data)),
         "application/json"
     )
 
 def save_as_csv(client, object_name, data):
     if not data:
-        return
+        return # Don't save empty datasets
         
     output = StringIO()
     writer = csv.DictWriter(output, fieldnames=data[0].keys())
@@ -172,17 +182,19 @@ def save_as_csv(client, object_name, data):
     )
 
 def update_record(client, master_path, record_id, updates, is_csv=False):
-    try:
+    try: # Load the existing dataset
         data = load_existing_csv_data(client, master_path) if is_csv else load_existing_json_data(client, master_path)
         updated = False
-        
+
+         # Find the record by ID and update it
         for record in data:
             if str(record['id']) == str(record_id):
                 record.update(updates)
                 record['updated_at'] = datetime.utcnow().isoformat()
                 updated = True
                 break
-        
+
+        # Save updated data back to MinIO
         if updated:
             if is_csv:
                 save_as_csv(client, master_path, data)
@@ -200,7 +212,8 @@ def add_new_airline():
     data = load_existing_json_data(client, MASTER_AIRLINE_PATH)
     now = datetime.utcnow().isoformat()
     ag = AirlineGenerator()
-    
+
+    # Avoid reusing existing IATA codes
     existing_iatas = {a["iata"] for a in data}
     ag.available_iata = [code for code in ag.available_iata if code not in existing_iatas]
     random.shuffle(ag.available_iata)
@@ -209,7 +222,7 @@ def add_new_airline():
     data.append(new_airline)
 
     save_as_json(client, MASTER_AIRLINE_PATH, data)
-    print(f"✅ Added new airline: {new_airline['name']} ({new_airline['iata']})")
+    print(f"Added new airline: {new_airline['name']} ({new_airline['iata']})")
 
 def add_new_airport():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -225,7 +238,7 @@ def add_new_airport():
     data.append(new_airport)
 
     save_as_json(client, MASTER_AIRPORT_PATH, data)
-    print(f"✅ Added new airport: {new_airport['airport_name']} ({new_airport['iata_code']})")
+    print(f"Added new airport: {new_airport['airport_name']} ({new_airport['iata_code']})")
 
 def add_new_country():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -237,7 +250,7 @@ def add_new_country():
     data.append(new_country)
 
     save_as_csv(client, MASTER_COUNTRY_PATH, data)
-    print(f"✅ Added new country: {new_country['name']} ({new_country['iso2']})")
+    print(f"Added new country: {new_country['name']} ({new_country['iso2']})")
 
 def add_new_city():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -253,7 +266,7 @@ def add_new_city():
     data.append(new_city)
 
     save_as_csv(client, MASTER_CITY_PATH, data)
-    print(f"✅ Added new city: {new_city['city_name']} ({new_city['iata_code']})")
+    print(f"Added new city: {new_city['city_name']} ({new_city['iata_code']})")
 
 # ============== UPDATE TASKS ==============
 def update_airline():
@@ -266,7 +279,7 @@ def update_airline():
             'hub': random.choice(list(COUNTRIES.values()))['hubs'][0]
         }
         if update_record(client, MASTER_AIRLINE_PATH, record['id'], updates, is_csv=False):
-            print(f"✅ Updated airline {record['id']} with {updates}")
+            print(f"Updated airline {record['id']} with {updates}")
 
 def update_airport():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -278,7 +291,7 @@ def update_airport():
             'country_iso2': random.choice(list(COUNTRIES.keys()))
         }
         if update_record(client, MASTER_AIRPORT_PATH, record['id'], updates, is_csv=False):
-            print(f"✅ Updated airport {record['id']} with {updates}")
+            print(f"Updated airport {record['id']} with {updates}")
 
 def update_country():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -290,7 +303,7 @@ def update_country():
             'capital': f"New {record['capital']}"
         }
         if update_record(client, MASTER_COUNTRY_PATH, record['id'], updates, is_csv=True):
-            print(f"✅ Updated country {record['id']} with {updates}")
+            print(f"Updated country {record['id']} with {updates}")
 
 def update_city():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -303,7 +316,7 @@ def update_city():
             'longitude': round(random.uniform(-180, 180), 6)
         }
         if update_record(client, MASTER_CITY_PATH, record['id'], updates, is_csv=True):
-            print(f"✅ Updated city {record['id']} with {updates}")
+            print(f"Updated city {record['id']} with {updates}")
 
 # ============== DAG CONFIGURATION ==============
 default_args = {
@@ -315,7 +328,7 @@ default_args = {
 with DAG(
     dag_id='master_data_management',
     default_args=default_args,
-    schedule_interval=None,
+    schedule_interval="@daily",
     start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=['minio', 'master-data', 'management']
