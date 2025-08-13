@@ -35,9 +35,9 @@ gold_tables = [
 for table in gold_tables:
     try:
         spark.sql(f"DROP TABLE IF EXISTS {table}")
-        print(f"✅ Dropped existing table: {table}")
+        print(f"Dropped existing table: {table}")
     except Exception as e:
-        print(f"⚠️ Error dropping table {table}: {str(e)}")
+        print(f"Error dropping table {table}: {str(e)}")
 
 # ================== 1. Flight Performance Summary ==================
 flight_perf_df = flight_df.join(
@@ -64,7 +64,7 @@ flight_perf_df = flight_df.join(
 )
 
 flight_perf_df.writeTo("nessie.gold_layer.flight_performance_summary_v1").createOrReplace()
-print("✅ Flight Performance Summary created in Iceberg")
+print("Flight Performance Summary created in Iceberg")
 
 # ================== 2. Airport Capacity Analysis ==================
 airport_analysis_df = airport_df.join(
@@ -81,7 +81,7 @@ airport_analysis_df = airport_df.join(
 )
 
 airport_analysis_df.writeTo("nessie.gold_layer.airport_capacity_analysis_v1").createOrReplace()
-print("✅ Airport Capacity Analysis created in Iceberg")
+print("Airport Capacity Analysis created in Iceberg")
 
 # ================== 3. City Weather Analysis ==================
 city_weather_df = cities_df.join(
@@ -105,8 +105,8 @@ city_weather_df = cities_df.join(
 )
 
 city_weather_df.writeTo("nessie.gold_layer.city_weather_analysis_v1").createOrReplace()
-print("✅ City Weather Analysis created in Iceberg")
+print("City Weather Analysis created in Iceberg")
 
 # ================== Pipeline Complete ==================
-print("🎉 Gold Layer Pipeline Complete - All tables recreated in Iceberg")
+print("Gold Layer Pipeline Complete - All tables recreated in Iceberg")
 spark.stop()
