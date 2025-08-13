@@ -1,17 +1,17 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import trim, upper, initcap, col
 
-# 🔹 File paths in MinIO
+# File paths in MinIO
 csv_file_path = "s3a://lakehouse/bronze_layer/2025/07/21/csv/weather_data/weather_data_000003.csv"
 json_file_path = "s3a://lakehouse/bronze_layer/2025/07/21/json/flight_data/flight_data_000004.json"
 
-# 🔹 PostgreSQL config
+# PostgreSQL config
 pg_url = "jdbc:postgresql://postgres:5432/airflow"
 pg_user = "airflow"
 pg_password = "airflow"
 pg_driver = "org.postgresql.Driver"
 
-# 1️⃣ Initialize SparkSession (JAR already in image, no need to add .config("spark.jars"))
+# Initialize SparkSession (JAR already in image, no need to add .config("spark.jars"))
 spark = SparkSession.builder \
     .appName("Bronze to PostgreSQL Load") \
     .master("spark://spark-master:7077") \
@@ -27,7 +27,7 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# 2️⃣ Read and clean CSV
+# Read and clean CSV
 df_csv = spark.read.option("header", "true").option("inferSchema", "true").csv(csv_file_path)
 #df_csv_clean = df_csv.dropDuplicates().na.fill("UNKNOWN")
 #df_csv_clean = df_csv_clean.select([
@@ -35,7 +35,7 @@ df_csv = spark.read.option("header", "true").option("inferSchema", "true").csv(c
 #    for c in df_csv_clean.columns
 #])
 
-# 3️⃣ Read and clean JSON
+# Read and clean JSON
 df_json = spark.read.option("multiline", "true").json(json_file_path)
 #df_json_clean = df_json.dropDuplicates().na.fill("UNKNOWN")
 #df_json_clean = df_json_clean.select([
@@ -43,7 +43,7 @@ df_json = spark.read.option("multiline", "true").json(json_file_path)
 #    for c in df_json_clean.columns
 #])
 
-# 4️⃣ Write weather_data to PostgreSQL
+# Write weather_data to PostgreSQL
 df_csv.write \
     .format("jdbc") \
     .option("url", pg_url) \
@@ -54,7 +54,7 @@ df_csv.write \
     .mode("overwrite") \
     .save()
 
-# 5️⃣ Write flight_data to PostgreSQL
+# Write flight_data to PostgreSQL
 df_json.write \
     .format("jdbc") \
     .option("url", pg_url) \
@@ -65,11 +65,11 @@ df_json.write \
     .mode("overwrite") \
     .save()
 
-# ✅ Optional Preview
-print("✅ Weather Data Preview:")
+# Optional Preview
+print("Weather Data Preview:")
 df_csv.show(5)
 
-print("✅ Flight Data Preview:")
+print("Flight Data Preview:")
 df_json.show(5)
 
 spark.stop()
