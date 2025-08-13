@@ -152,7 +152,7 @@ def run_great_expectations_validation_from_minio():
         validator_country.expect_column_to_exist("iso2")
         validator_country.expect_column_to_exist("capital")
         validator_country.expect_column_to_exist("continent")
-        validator_country.expect_column_to_exist("population")
+        validator_country.expect_column_to_exist("population2")
         validator_country.expect_column_to_exist("id")
         results_country = validator_country.validate()
         
