@@ -37,6 +37,7 @@ df_city = spark.read.option("header", True).csv(bronze_city_path)
 df_weather = spark.read.option("header", True).csv(bronze_weather_path)
 
 # Clean and Transform
+# Cleans strings (trim spaces, proper case, uppercase)
 df_country_clean = df_country.na.fill({
         "name": "UNKNOWN",
         "iso2": "XX",
@@ -47,7 +48,7 @@ df_country_clean = df_country.na.fill({
     .withColumn("iso2", upper(trim(col("iso2")))) \
     .withColumn("capital", initcap(trim(col("capital")))) \
     .withColumn("continent", upper(trim(col("continent")))) \
-    .dropDuplicates()
+    .dropDuplicates() # Removes duplicate rows.
 
 df_city_clean = df_city.na.fill({
         "city_name": "UNKNOWN",
@@ -75,7 +76,12 @@ df_weather_clean = df_weather.na.fill({
 # Ensure Namespace
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
 
+# Incremental Merge for Countries & Cities
 # Country MERGE using DataFrame join logic
+# Merge new data with existing data in the Silver layer:
+# Uses outer join on id.
+# coalesce() picks source value if present, otherwise keeps the old value.
+# Overwrites partitions (incremental load).
 try:
     df_existing_country = spark.read.format("iceberg").load("nessie.silver_layer.countries_data")
     df_merged_country = df_existing_country.alias("target").join(
