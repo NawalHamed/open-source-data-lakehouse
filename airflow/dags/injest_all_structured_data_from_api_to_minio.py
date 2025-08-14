@@ -208,9 +208,9 @@ with DAG(
 ) as dag:
     
  # Task definitions
-    t1 = PythonOperator(task_id='generate_country_master', python_callable=generate_country_master)
-    t2 = PythonOperator(task_id='generate_city_master', python_callable=generate_city_master)
+    #t1 = PythonOperator(task_id='generate_country_master', python_callable=generate_country_master)
+    #t2 = PythonOperator(task_id='generate_city_master', python_callable=generate_city_master)
     t3 = PythonOperator(task_id='generate_weather_data', python_callable=generate_weather_data)
     
  # Task dependencies: countries → cities → weather
-    t1 >> t2 >> t3
+    t3
