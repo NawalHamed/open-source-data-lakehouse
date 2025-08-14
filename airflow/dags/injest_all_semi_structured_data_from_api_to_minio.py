@@ -193,11 +193,11 @@ with DAG(
     tags=['minio', 'master-data', 'flights']
 ) as dag:
     # Task 1: Generate airline master data
-    t1 = PythonOperator(task_id='generate_airline_master', python_callable=generate_airline_master)
+    #t1 = PythonOperator(task_id='generate_airline_master', python_callable=generate_airline_master)
     # Task 2: Generate airport master data
-    t2 = PythonOperator(task_id='generate_airport_master', python_callable=generate_airport_master)
+    #t2 = PythonOperator(task_id='generate_airport_master', python_callable=generate_airport_master)
     # Task 3: Generate daily flight data
     t3 = PythonOperator(task_id='generate_flight_data', python_callable=generate_flight_data)
     
     # Task dependencies: airline -> airport -> flights
-    t1 >> t2 >> t3
+    t3
