@@ -93,8 +93,8 @@ try:
         coalesce(col("source.capital"), col("target.capital")).alias("capital"),
         coalesce(col("source.continent"), col("target.continent")).alias("continent"),
         coalesce(col("source.population"), col("target.population")).alias("population"),
-        coalesce(col("source.created_at"), col("target.created_at")).alias("created_at"),
-        coalesce(col("source.updated_at"), col("target.updated_at")).alias("updated_at")
+        #coalesce(col("source.created_at"), col("target.created_at")).alias("created_at"),
+        #coalesce(col("source.updated_at"), col("target.updated_at")).alias("updated_at")
     )
     df_merged_country.writeTo("nessie.silver_layer.countries_data").overwritePartitions()
 except:
@@ -113,8 +113,8 @@ try:
         coalesce(col("source.latitude"), col("target.latitude")).alias("latitude"),
         coalesce(col("source.longitude"), col("target.longitude")).alias("longitude"),
         coalesce(col("source.timezone"), col("target.timezone")).alias("timezone"),
-        coalesce(col("source.created_at"), col("target.created_at")).alias("created_at"),
-        coalesce(col("source.updated_at"), col("target.updated_at")).alias("updated_at")
+        #coalesce(col("source.created_at"), col("target.created_at")).alias("created_at"),
+        #coalesce(col("source.updated_at"), col("target.updated_at")).alias("updated_at")
     )
     df_merged_city.writeTo("nessie.silver_layer.cities_data").overwritePartitions()
 except:
