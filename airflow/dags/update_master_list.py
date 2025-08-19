@@ -34,7 +34,14 @@ COUNTRIES = {
     "GB": {"name": "United Kingdom", "hubs": ["LHR", "LGW", "MAN"]},
     "IN": {"name": "India", "hubs": ["DEL", "BOM", "BLR"]},
 }
-
+CITIES = {
+    "US": ["New York", "Los Angeles", "Chicago", "Houston", "Miami"],
+    "DE": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne"],
+    "FR": ["Paris", "Lyon", "Marseille", "Nice", "Toulouse"],
+    "JP": ["Tokyo", "Osaka", "Kyoto", "Yokohama", "Nagoya"],
+    "GB": ["London", "Manchester", "Birmingham", "Liverpool", "Glasgow"],
+    "IN": ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"],
+}
 # List of continent codes
 CONTINENTS = ["AF", "EU", "AS", "NA", "SA", "OC", "AN"]
 
@@ -127,11 +134,13 @@ class CityGenerator:
         
     def generate_city(self, index, timestamp):
         iata = self.available_iata.pop()
-        country_code = random.choice(list(COUNTRIES.keys()))
+        country_code = random.choice(list(COUNTRIES.keys()))  # Pick a random country
+        city_name = random.choice(CITIES[country_code])  # Pick a city from that country
+        
         return {
             "id": str(4000000 + index),
             "iata_code": iata,
-            "city_name": f"City {index}",
+            "city_name": city_name,
             "country_iso2": country_code,
             "latitude": round(random.uniform(-90, 90), 6),
             "longitude": round(random.uniform(-180, 180), 6),
@@ -139,6 +148,26 @@ class CityGenerator:
             "created_at": timestamp,
             "updated_at": timestamp
         }
+
+#class CityGenerator:
+#    def __init__(self):
+#        self.available_iata = [f"{a}{b}{c}" for a, b, c in product(ascii_uppercase, repeat=3)]
+#        random.shuffle(self.available_iata)
+        
+#    def generate_city(self, index, timestamp):
+#        iata = self.available_iata.pop()
+#        country_code = random.choice(list(COUNTRIES.keys()))
+#        return {
+#            "id": str(4000000 + index),
+#            "iata_code": iata,
+#            "city_name": f"City {index}",
+#            "country_iso2": country_code,
+#            "latitude": round(random.uniform(-90, 90), 6),
+#            "longitude": round(random.uniform(-180, 180), 6),
+#            "timezone": "UTC",
+#            "created_at": timestamp,
+#            "updated_at": timestamp
+#        }
 
 # ============== HELPERS ==============
 def load_existing_json_data(client, object_name):
