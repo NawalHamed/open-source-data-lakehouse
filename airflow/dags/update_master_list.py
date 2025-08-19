@@ -376,7 +376,7 @@ with DAG(
     upd_city = PythonOperator(task_id='update_city', python_callable=update_city)
 
     # Option 1: Separate addition and update flows
-    addition_flow = add_airline >> add_airport #>> add_country >> add_city
+    addition_flow = add_airline >> add_airport >> add_country >> add_city
   #  update_flow = upd_airline >> upd_airport >> upd_country >> upd_city
 
     # Set the dependencies
