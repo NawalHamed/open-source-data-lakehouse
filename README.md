@@ -35,7 +35,5 @@ This lakehouse architecture leverages the following key open-source tools:
 2. **Data Transformation** → Spark jobs read, process, and write data as Iceberg tables, managed by Nessie.  
 3. **Data Analysis** → Superset connects to Iceberg/Nessie to power visualizations and dashboards.  
 
----
 
-## 📂 Example Project Structure  
 
