@@ -14,7 +14,7 @@ services:
       - "9102:9001" # MinIO console UI
     environment:
       MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_PASSWORD: 123hhbj211hjb1464
       VIRTUAL_HOST: minio.rihal.dev
       VIRTUAL_PORT: 9001
       MINIO_STORAGE_MINFREE: 100Mi
@@ -39,7 +39,7 @@ services:
       #nessie.version.store.persist: "true"
       QUARKUS_DATASOURCE_JDBC_URL: "jdbc:postgresql://postgres_v:5432/airflow" # Using existing airflow DB
       QUARKUS_DATASOURCE_USERNAME: airflow
-      QUARKUS_DATASOURCE_PASSWORD: airflow
+      QUARKUS_DATASOURCE_PASSWORD: lqkljdwien227849an23k13
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
       nessie.version.store.type: jdbc
     volumes:
@@ -55,7 +55,7 @@ services:
     container_name: postgres_v
     environment:
       POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
+      POSTGRES_PASSWORD: lqkljdwien227849an23k13
       POSTGRES_DB: airflow
     ports:
       - "5490:5432"
@@ -81,7 +81,7 @@ services:
       SPARK_MODE: master
       SPARK_MASTER_PORT: 7077
       AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_SECRET_ACCESS_KEY: 123hhbj211hjb1464
       AWS_S3_ENDPOINT: http://minio_v:9009
       NESSIE_URI: http://nessie:19120/api/v2
       WAREHOUSE: /warehouse
@@ -113,7 +113,7 @@ services:
       SPARK_MODE: worker
       SPARK_MASTER_URL: spark://spark-master:7077
       AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_SECRET_ACCESS_KEY: 123hhbj211hjb1464
       SPARK_WORKER_CORES: 4
       SPARK_WORKER_MEMORY: 8g
     volumes:
@@ -133,7 +133,7 @@ services:
       SPARK_WORKER_CORES: 4
       SPARK_WORKER_MEMORY: 8g
       AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_SECRET_ACCESS_KEY: 123hhbj211hjb1464
     volumes:
       - ./spark/jobs:/opt/spark_jobs:rw
     networks:
@@ -156,7 +156,7 @@ services:
       - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
       - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_SECRET_ACCESS_KEY=123hhbj211hjb1464
       - AWS_S3_ENDPOINT=http://minio_v:9009
       - NESSIE_URI=http://nessie:19120/api/v2
       - WAREHOUSE=warehouse
@@ -187,7 +187,7 @@ services:
       - SUPERSET_LOAD_EXAMPLES=no
       - SUPERSET_DATABASE_HOST=postgres_v
       - SUPERSET_DATABASE_USER=airflow
-      - SUPERSET_DATABASE_PASSWORD=airflow
+      - SUPERSET_DATABASE_PASSWORD=lqkljdwien227849an23k13
       - SUPERSET_DATABASE_DB=airflow
       - VIRTUAL_HOST=superset.rihal.dev
       - VIRTUAL_PORT=8088
@@ -223,7 +223,7 @@ services:
       - ./trino/config.properties:/etc/trino/config.properties
     environment:
       - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_SECRET_ACCESS_KEY=123hhbj211hjb1464
       - S3_ENDPOINT=http://minio:9009
       - S3_PATH_STYLE=true
       - VIRTUAL_HOST=trino.rihal.dev
