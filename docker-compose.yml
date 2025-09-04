@@ -39,7 +39,7 @@ services:
       #nessie.version.store.persist: "true"
       QUARKUS_DATASOURCE_JDBC_URL: "jdbc:postgresql://postgres_v:5432/airflow" # Using existing airflow DB
       QUARKUS_DATASOURCE_USERNAME: airflow
-      QUARKUS_DATASOURCE_PASSWORD: lqkljdwien227849an23k13
+      QUARKUS_DATASOURCE_PASSWORD: airflow
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
       nessie.version.store.type: jdbc
     volumes:
@@ -155,7 +155,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:lqkljdwien227849an23k13@postgres_v:5432/airflow
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=123hhbj211hjb1464
       - AWS_S3_ENDPOINT=http://minio_v:9009
@@ -172,7 +172,7 @@ services:
       bash -c "
         airflow db init &&
         airflow db migrate &&
-        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password lqkljdwien227849an23k13 &&
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password airflow &&
         airflow webserver & airflow scheduler
       "
     networks:
@@ -188,7 +188,7 @@ services:
       - SUPERSET_LOAD_EXAMPLES=no
       - SUPERSET_DATABASE_HOST=postgres_v
       - SUPERSET_DATABASE_USER=airflow
-      - SUPERSET_DATABASE_PASSWORD=lqkljdwien227849an23k13
+      - SUPERSET_DATABASE_PASSWORD=airflow
       - SUPERSET_DATABASE_DB=airflow
       - VIRTUAL_HOST=superset.rihal.dev
       - VIRTUAL_PORT=8088
@@ -201,7 +201,7 @@ services:
       bash -c "
         pip install trino[sqlalchemy] &&
         superset db upgrade &&
-        superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password admin &&
+        superset fab create-admin --username admin --firstname Superset --lastname Admin --email admin@superset.com --password kjff98ufjkenfj234235 &&
         superset init &&
         superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
       "
