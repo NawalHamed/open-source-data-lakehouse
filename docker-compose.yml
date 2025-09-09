@@ -172,7 +172,7 @@ services:
       bash -c "
         airflow db init &&
         airflow db migrate &&
-        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password airflow &&
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password '1213243rewfret4565f' &&
         airflow webserver & airflow scheduler
       "
     networks:
