@@ -1,4 +1,2 @@
-from superset.security.manager import AUTH_DB
-
-AUTH_TYPE = 1
-PUBLIC_ROLE_LIKE_GAMMA = False
+AUTH_TYPE = 1  # Use database authentication
+PUBLIC_ROLE_LIKE_GAMMA = False  # Prevent unauthenticated access
