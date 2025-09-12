@@ -20,7 +20,7 @@ DEFAULT_ARGS = {
 MINIO_CLIENT = Minio(
     "minio:9009",
     access_key="minioadmin",
-    secret_key="minioadmin",
+    secret_key="123hhbj211hjb1464",
     secure=False
 )
 
@@ -81,3 +81,4 @@ with DAG(
         task_id="generate_and_upload_airline_table_images",
         python_callable=generate_and_upload_airline_images
     )
+
