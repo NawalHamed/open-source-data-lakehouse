@@ -18,7 +18,7 @@ NUM_FLIGHT_RECORDS = 500
 # MinIO connection details
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
-MINIO_SECRET_KEY = 'minioadmin'
+MINIO_SECRET_KEY = '123hhbj211hjb1464'
 MINIO_BUCKET = 'lakehouse'
 FILE_FORMAT = 'json'
 
