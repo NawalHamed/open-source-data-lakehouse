@@ -16,7 +16,7 @@ from minio import Minio
 # MinIO connection details
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
-MINIO_SECRET_KEY = 'minioadmin'
+MINIO_SECRET_KEY = '123hhbj211hjb1464'
 MINIO_BUCKET = 'lakehouse'
 
 # File paths in the Bronze Layer
