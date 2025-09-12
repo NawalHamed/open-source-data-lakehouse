@@ -19,7 +19,7 @@ NUM_CITY_RECORDS = 200
 # MinIO storage configuration
 MINIO_ENDPOINT = 'minio:9009'
 MINIO_ACCESS_KEY = 'minioadmin'
-MINIO_SECRET_KEY = 'minioadmin'
+MINIO_SECRET_KEY = '123hhbj211hjb1464'
 MINIO_BUCKET = 'lakehouse'
 FILE_FORMAT = 'csv' # Output file format for stored data
 
