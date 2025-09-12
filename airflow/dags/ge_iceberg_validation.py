@@ -60,7 +60,7 @@ def run_great_expectations_validation_from_minio():
     # MinIO connection settings
     MINIO_ENDPOINT = "http://minio:9009"
     MINIO_ACCESS_KEY = "minioadmin"
-    MINIO_SECRET_KEY = "minioadmin"
+    MINIO_SECRET_KEY = "123hhbj211hjb1464"
     MINIO_BUCKET_NAME = "lakehouse"
 
     # Get current UTC date to build file paths for today's data
