@@ -73,19 +73,14 @@ class CountryGenerator:
     def generate_country(self, index, timestamp):
         if index < len(PREDEFINED_COUNTRIES):
             c = PREDEFINED_COUNTRIES[index].copy()
+            c["id"] = str(1000000 + index)
+            c["created_at"] = timestamp
+            c["updated_at"] = timestamp
+            return c
         else:
-            name = f"Country{index}"
-            c = {
-                "name": name,
-                "iso2": name[:2].upper(),
-                "capital": f"{name}City",
-                "continent": random.choice(["AF", "EU", "AS", "NA"]),
-                "population": random.randint(100000, 50000000)
-            }
-        c["id"] = str(1000000 + index)
-        c["created_at"] = timestamp
-        c["updated_at"] = timestamp
-        return c
+            # Instead of generating fake countries, just return None
+            return None
+
 
 class CityGenerator:
     def __init__(self):
