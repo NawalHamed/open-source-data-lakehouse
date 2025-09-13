@@ -269,17 +269,72 @@ def add_new_airport():
     save_as_json(client, MASTER_AIRPORT_PATH, data)
     print(f"Added new airport: {new_airport['airport_name']} ({new_airport['iata_code']})")
 
-def add_new_country():
+# def add_new_country():
+#     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
+#     data = load_existing_csv_data(client, MASTER_COUNTRY_PATH)
+#     now = datetime.utcnow().isoformat()
+#     cg = CountryGenerator()
+
+#     new_country = cg.generate_country(len(data), now)
+#     data.append(new_country)
+
+#     save_as_csv(client, MASTER_COUNTRY_PATH, data)
+#     print(f"Added new country: {new_country['name']} ({new_country['iso2']})")
+
+#--------------------------------------------------------------------------------------
+def add_new_country_from_weather():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
-    data = load_existing_csv_data(client, MASTER_COUNTRY_PATH)
+    
+    # Load existing country master
+    master_countries = load_existing_csv_data(client, MASTER_COUNTRY_PATH)
+    existing_iso2 = {c["iso2"] for c in master_countries}
+
+    # Load latest weather data (assuming latest file for simplicity)
+    # You can adjust the path pattern to your folder structure
+    weather_files = client.list_objects(MINIO_BUCKET, prefix="bronze_layer/", recursive=True)
+    latest_weather_file = None
+    latest_ts = None
+    for obj in weather_files:
+        if "weather_data" in obj.object_name:
+            ts = obj.last_modified
+            if latest_ts is None or ts > latest_ts:
+                latest_ts = ts
+                latest_weather_file = obj.object_name
+
+    if not latest_weather_file:
+        print("No weather data found, skipping country update.")
+        return
+
+    weather_data = load_existing_csv_data(client, latest_weather_file)
+
+    # Extract unique countries from weather
+    weather_countries = set([w["country"] for w in weather_data])
+
+    # Find countries not yet in master
+    new_countries = weather_countries - existing_iso2
+
+    if not new_countries:
+        print("No new countries to add.")
+        return
+
     now = datetime.utcnow().isoformat()
-    cg = CountryGenerator()
+    for i, country_name in enumerate(new_countries, start=len(master_countries)):
+        new_country = {
+            "id": str(3000000 + i),
+            "name": country_name,
+            "iso2": country_name[:2].upper(),  # or any mapping if you have ISO codes
+            "capital": f"Capital {country_name}",
+            "continent": random.choice(CONTINENTS),
+            "population": random.randint(1000000, 1000000000),
+            "created_at": now,
+            "updated_at": now
+        }
+        master_countries.append(new_country)
+        print(f"Added new country: {new_country['name']} ({new_country['iso2']})")
 
-    new_country = cg.generate_country(len(data), now)
-    data.append(new_country)
-
-    save_as_csv(client, MASTER_COUNTRY_PATH, data)
-    print(f"Added new country: {new_country['name']} ({new_country['iso2']})")
+    # Save updated master
+    save_as_csv(client, MASTER_COUNTRY_PATH, master_countries)
+#------------------------------------------------------------------------
 
 def add_new_city():
     client = Minio(MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, secure=False)
@@ -366,7 +421,8 @@ with DAG(
     # Addition tasks
     add_airline = PythonOperator(task_id='add_airline', python_callable=add_new_airline)
     add_airport = PythonOperator(task_id='add_airport', python_callable=add_new_airport)
-    add_country = PythonOperator(task_id='add_country', python_callable=add_new_country)
+    #add_country = PythonOperator(task_id='add_country', python_callable=add_new_country)
+    add_country = PythonOperator(task_id='add_country', python_callable=add_new_country_from_weather)
     add_city = PythonOperator(task_id='add_city', python_callable=add_new_city)
 
     # Update tasks
