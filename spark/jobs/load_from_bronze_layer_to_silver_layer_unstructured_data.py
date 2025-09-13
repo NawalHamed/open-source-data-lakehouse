@@ -15,7 +15,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.nessie.ref", "main") \
     .config("spark.sql.catalog.nessie.warehouse", "s3a://lakehouse/") \
     .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin") \
+    .config("spark.hadoop.fs.s3a.secret.key", "123hhbj211hjb1464") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9009") \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
@@ -76,3 +76,4 @@ final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace
 
 # Step 6: Show result
 spark.read.table("nessie.silver_layer.image_metadata_with_text").show(truncate=False)
+
