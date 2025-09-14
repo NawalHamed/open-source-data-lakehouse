@@ -1,11 +1,10 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import input_file_name, regexp_replace, pandas_udf, PandasUDFType
+from pyspark.sql.functions import input_file_name, regexp_replace
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from PIL import Image
 import numpy as np
 import pytesseract
 import io
-import pandas as pd
 
 # Step 1: SparkSession with Iceberg + Nessie + MinIO
 spark = SparkSession.builder \
@@ -22,7 +21,40 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .getOrCreate()
 
-# Step 2: Define the schema for the output DataFrame
+# Step 2: Read images from all date-partitioned folders
+image_df = spark.read.format("binaryFile") \
+    .load("s3a://lakehouse/bronze_layer/*/*/*/images/*.jpg") \
+    .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
+
+# Step 3: Decode + extract metadata + OCR
+image_data_list = image_df.collect()
+results = []
+
+for row in image_data_list:
+    file_name = row["file_name"]
+    binary_data = row["content"]
+
+    try:
+        img = Image.open(io.BytesIO(binary_data))
+        img_array = np.array(img)
+        height, width = img.height, img.width
+        mode = img.mode
+        n_channels = img_array.shape[2] if len(img_array.shape) == 3 else 1
+        pixel_sample = img_array[:2, :2].tolist()
+        pixel_data_str = str(pixel_sample)
+        ocr_text = pytesseract.image_to_string(img)
+        decode_status = "SUCCESS"
+    except Exception as e:
+        height, width, n_channels, mode = None, None, None, None
+        pixel_data_str = ""
+        ocr_text = ""
+        decode_status = f"ERROR: {str(e)}"
+
+    results.append((
+        file_name, decode_status, height, width, n_channels, mode, pixel_data_str, ocr_text
+    ))
+
+# Step 4: Create DataFrame
 schema = StructType([
     StructField("file_name", StringType(), True),
     StructField("decode_status", StringType(), True),
@@ -34,50 +66,17 @@ schema = StructType([
     StructField("ocr_text", StringType(), True),
 ])
 
-# Step 3: Define the Pandas UDF for image processing
-@pandas_udf(schema, PandasUDFType.GROUPED_MAP)
-def process_images_udf(df: pd.DataFrame) -> pd.DataFrame:
-    results = []
-    for index, row in df.iterrows():
-        file_name = row["file_name"]
-        binary_data = row["content"]
-
-        try:
-            img = Image.open(io.BytesIO(binary_data))
-            img_array = np.array(img)
-            height, width = img.height, img.width
-            mode = img.mode
-            n_channels = img_array.shape[2] if len(img_array.shape) == 3 else 1
-            pixel_sample = img_array[:2, :2].tolist()
-            pixel_data_str = str(pixel_sample)
-            ocr_text = pytesseract.image_to_string(img)
-            decode_status = "SUCCESS"
-        except Exception as e:
-            height, width, n_channels, mode = None, None, None, None
-            pixel_data_str = ""
-            ocr_text = ""
-            decode_status = f"ERROR: {str(e)}"
-        
-        results.append((file_name, decode_status, height, width, n_channels, mode, pixel_data_str, ocr_text))
-    
-    return pd.DataFrame(results, columns=schema.names)
-
-# Step 4: Read images and apply the UDF
-image_df = spark.read.format("binaryFile") \
-    .load("s3a://lakehouse/bronze_layer/*/*/*/images/*.jpg") \
-    .withColumn("file_name", regexp_replace(input_file_name(), ".*/", ""))
-
-# Add a grouping column for the UDF to ensure each row is processed individually
-processed_df = image_df.withColumn("group_id", input_file_name()).groupBy("group_id").apply(process_images_udf)
-
-# Drop the temporary grouping column
-final_df = processed_df.drop("group_id")
+final_df = spark.createDataFrame(results, schema=schema)
 
 # Step 5: Write to Iceberg table
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_text")
+#final_df.writeTo("nessie.silver_layer.image_metadata_with_text").overwritePartitions()
+
 final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace()
 
 # Step 6: Show result
 spark.read.table("nessie.silver_layer.image_metadata_with_text").show(truncate=False)
 
-spark.stop()
+
+
