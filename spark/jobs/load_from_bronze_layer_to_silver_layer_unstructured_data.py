@@ -70,10 +70,12 @@ final_df = spark.createDataFrame(results, schema=schema)
 
 # Step 5: Write to Iceberg table
 spark.sql("CREATE NAMESPACE IF NOT EXISTS nessie.silver_layer")
-spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_text")
+#spark.sql("DROP TABLE IF EXISTS nessie.silver_layer.image_metadata_with_text")
+final_df.writeTo("nessie.silver_layer.image_metadata_with_text").overwritePartitions()
 
-final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace()
+#final_df.writeTo("nessie.silver_layer.image_metadata_with_text").createOrReplace()
 
 # Step 6: Show result
 spark.read.table("nessie.silver_layer.image_metadata_with_text").show(truncate=False)
+
 
