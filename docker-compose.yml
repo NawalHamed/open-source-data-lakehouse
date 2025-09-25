@@ -266,7 +266,7 @@ services:
     networks:
       - shared-network
   
-   #-----------------KeyCloak-------------------
+  #-----------------KeyCloak-------------------
   keycloak_db:
     image: postgres:14.3-alpine
     container_name: keycloak_db
@@ -293,8 +293,8 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: "admlkrj23ugknkefwef!ky6"
       VIRTUAL_HOST: keycloak.rihal.dev
       VIRTUAL_PORT: 8099
-    #ports:
-      #- "8089:8080"
+    ports:
+      - "8099:8099"
     depends_on:
       - keycloak_db
     networks:
