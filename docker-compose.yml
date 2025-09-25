@@ -291,8 +291,8 @@ services:
       KC_DB_PASSWORD: "yt&wrwrwwrb324$"
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: "admlkrj23ugknkefwef!ky6"
-      - VIRTUAL_HOST: keycloak.rihal.dev
-      - VIRTUAL_PORT: 8099
+      VIRTUAL_HOST: keycloak.rihal.dev
+      VIRTUAL_PORT: 8099
     #ports:
       #- "8089:8080"
     depends_on:
