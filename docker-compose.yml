@@ -24,7 +24,9 @@ services:
       MINIO_IDENTITY_OPENID_CLIENT_ID: minio
       MINIO_IDENTITY_OPENID_CLIENT_SECRET: <secret>
       MINIO_IDENTITY_OPENID_SCOPES: openid,profile,email
-      
+    
+    depends_on:
+    - keycloak  
     volumes:
       - minio_data:/data
     networks:
