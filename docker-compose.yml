@@ -18,6 +18,13 @@ services:
       VIRTUAL_HOST: minio.rihal.dev
       VIRTUAL_PORT: 9001
       MINIO_STORAGE_MINFREE: 100Mi
+
+      # OIDC / Keycloak
+      MINIO_IDENTITY_OPENID_CONFIG_URL: http://keycloak:8080/realms/<realm>/.well-known/openid-configuration
+      MINIO_IDENTITY_OPENID_CLIENT_ID: minio
+      MINIO_IDENTITY_OPENID_CLIENT_SECRET: <secret>
+      MINIO_IDENTITY_OPENID_SCOPES: openid,profile,email
+      
     volumes:
       - minio_data:/data
     networks:
