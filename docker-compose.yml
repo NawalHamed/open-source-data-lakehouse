@@ -310,6 +310,7 @@ volumes:
   cloudbeaver-config:
   nessie_data:
   openmetadata_data:
+  keycloak_data:
 
 
 networks:
