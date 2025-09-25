@@ -156,13 +156,24 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__FERNET_KEY=wpkcTm8qVuIjMKZpsvUM_wm1EB_hzgRZb7v1wQCeuCI=
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres_v:5432/airflow
+       # AWS creds
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=123hhbj211hjb1464
       - AWS_S3_ENDPOINT=http://minio_v:9009
+        # Nessie
       - NESSIE_URI=http://nessie:19120/api/v2
       - WAREHOUSE=warehouse
       - VIRTUAL_HOST=airflow.rihal.dev
       - VIRTUAL_PORT=8080
+       # OIDC with Keycloak
+      - AIRFLOW__WEBSERVER__AUTHENTICATE=True
+      - AIRFLOW__WEBSERVER__RBAC=True
+      - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
+      - AIRFLOW__WEBSERVER__OIDC_CLIENT_ID=airflow
+      - AIRFLOW__WEBSERVER__OIDC_CLIENT_SECRET=<secret>
+      - AIRFLOW__WEBSERVER__OIDC_ISSUER=http://keycloak:8080/realms/<realm>
+
+      
     user: root
     volumes:
       - ./airflow/dags:/opt/airflow/dags
