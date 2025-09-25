@@ -8,7 +8,13 @@ services:
     #image: minio/minio:RELEASE.2023-08-04T19-57-37Z
     image: minio/minio:RELEASE.2023-09-04T19-57-37Z
     container_name: minio_v
-    command: server --address ":9009" /data --console-address ":9001"
+    command: >
+      /bin/sh -c "
+        until curl -s http://keycloak:8082/realms/myrealm/.well-known/openid-configuration; do
+          echo 'Waiting for Keycloak OIDC...'; sleep 5;
+        done
+        && minio server --address ':9009' /data --console-address ':9001'
+      "
     ports:
       - "9009:9009" # MinIO API
       - "9102:9001" # MinIO console UI
@@ -20,9 +26,9 @@ services:
       MINIO_STORAGE_MINFREE: 100Mi
 
       # OIDC / Keycloak
-      MINIO_IDENTITY_OPENID_CONFIG_URL: http://keycloak:8080/realms/<realm>/.well-known/openid-configuration
+      MINIO_IDENTITY_OPENID_CONFIG_URL: http://keycloak:8082/realms/myrealm/.well-known/openid-configuration
       MINIO_IDENTITY_OPENID_CLIENT_ID: minio
-      MINIO_IDENTITY_OPENID_CLIENT_SECRET: <secret>
+      MINIO_IDENTITY_OPENID_CLIENT_SECRET: "my-client-secret"
       MINIO_IDENTITY_OPENID_SCOPES: openid,profile,email
     
     depends_on:
@@ -285,7 +291,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: keycloak
-    command: start-dev
+    command: start-dev --http-port=8082
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak
@@ -294,9 +300,9 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: "admlkrj23ugknkefwef!ky6"
       VIRTUAL_HOST: keycloak.rihal.dev
-      VIRTUAL_PORT: 8099
+      VIRTUAL_PORT: 8082
     ports:
-      - "8099:8099"
+      - "8099:8082"
     depends_on:
       - keycloak_db
     networks:
