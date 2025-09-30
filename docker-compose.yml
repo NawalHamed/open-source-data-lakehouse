@@ -12,7 +12,7 @@ services:
     command:
       - -c
       - |
-        until curl -s http://keycloak_v:8082/realms/myrealm/.well-known/openid-configuration; do
+        until curl -s http://keycloak:8082/realms/myrealm/.well-known/openid-configuration; do
           echo 'Waiting for Keycloak OIDC...'; sleep 5;
         done;
         exec minio server --address ':9009' /data --console-address ':9001'
@@ -187,7 +187,7 @@ services:
       - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
       - AIRFLOW__WEBSERVER__OIDC_CLIENT_ID=airflow
       - AIRFLOW__WEBSERVER__OIDC_CLIENT_SECRET=<secret>
-      - AIRFLOW__WEBSERVER__OIDC_ISSUER=http://keycloak:8080/realms/<realm>
+      - AIRFLOW__WEBSERVER__OIDC_ISSUER=http://keycloak:8082/realms/<realm>
 
       
     user: root
