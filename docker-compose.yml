@@ -29,7 +29,7 @@ services:
       # OIDC / Keycloak
       MINIO_IDENTITY_OPENID_CONFIG_URL: http://keycloak:8082/realms/myrealm/.well-known/openid-configuration
       MINIO_IDENTITY_OPENID_CLIENT_ID: minio
-      MINIO_IDENTITY_OPENID_CLIENT_SECRET: "my-client-secret"
+      MINIO_IDENTITY_OPENID_CLIENT_SECRET: "4HThyzYkuZlXEF77x8x2c5c2jZk2mFMX"
       MINIO_IDENTITY_OPENID_SCOPES: openid,profile,email
     
     depends_on:
